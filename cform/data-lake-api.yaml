@@ -1,0 +1,1340 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "The AWS CloudFormation template for deployment of the AWS Data Lake RESTful API"
+
+Parameters:
+    AuthorizerArn:
+        Type: String
+    AdminArn:
+        Type: String
+    CartArn:
+        Type: String
+    ProfileArn:
+        Type: String
+    SearchArn:
+        Type: String
+    PackageArn:
+        Type: String
+
+Resources:
+
+    DataLakeRestApi:
+        Type: "AWS::ApiGateway::RestApi"
+        Properties:
+            Description: "API Gateway for Data Lake RESTful API"
+            Name: "data-lake-api"
+
+    DataLakeAuthorizer:
+        Type: "AWS::ApiGateway::Authorizer"
+        Properties:
+            Name: "Data_Lake_Authorizer"
+            RestApiId: !Ref DataLakeRestApi
+            Type: "TOKEN"
+            AuthorizerUri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AuthorizerArn", "/invocations"]]
+            IdentitySource: "method.request.header.Auth"
+            AuthorizerResultTtlInSeconds: 300
+
+    LambdaInvokePermissionAuthorizer:
+        DependsOn: "DataLakeAuthorizer"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "AuthorizerArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", Ref: DataLakeRestApi,"/authorizers/", Ref: DataLakeAuthorizer]]
+
+
+    DataLakeApiAdminResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId:
+                Fn::GetAtt:
+                    - "DataLakeRestApi"
+                    - "RootResourceId"
+            PathPart: "admin"
+
+    DataLakeApiKeyResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeApiAdminResource
+            PathPart: "apikeys"
+
+    DataLakeApiKeyAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeApiKeyResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AdminArn", "/invocations"]]
+
+    DataLakeApiKeyOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeApiKeyResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionApiKeyAny:
+        DependsOn: "DataLakeApiKeyAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "AdminArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/admin/apikeys"]]
+
+    DataLakeApiKeyAccessKeyResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeApiKeyResource
+            PathPart: "{access_key_id}"
+
+    DataLakeApiKeyAccessKeyAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeApiKeyAccessKeyResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AdminArn", "/invocations"]]
+
+    DataLakeApiKeyAccessKeyOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeApiKeyAccessKeyResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionApiKeyAccessKeyAny:
+        DependsOn: "DataLakeApiKeyAccessKeyAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "AdminArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/admin/apikeys/{access_key_id}"]]
+
+    DataLakeInvitationResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeApiAdminResource
+            PathPart: "invitations"
+
+    DataLakeInvitationAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeInvitationResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AdminArn", "/invocations"]]
+
+    DataLakeInvitationOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeInvitationResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionInvitationAny:
+        DependsOn: "DataLakeInvitationAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "AdminArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/admin/invitations"]]
+
+    DataLakeUsersResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeApiAdminResource
+            PathPart: "users"
+
+    DataLakeUsersAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeUsersResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AdminArn", "/invocations"]]
+
+    DataLakeUsersOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeUsersResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionUsersAny:
+        DependsOn: "DataLakeUsersAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "AdminArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/admin/users"]]
+
+    DataLakeUsersUserIdResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeUsersResource
+            PathPart: "{user_id}"
+
+    DataLakeUsersUserIdAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeUsersUserIdResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AdminArn", "/invocations"]]
+
+    DataLakeUsersUserIdOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeUsersUserIdResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionUsersUserIdAny:
+        DependsOn: "DataLakeUsersUserIdAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "AdminArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/admin/users/{user_id}"]]
+
+    DataLakeSettingsResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeApiAdminResource
+            PathPart: "settings"
+
+    DataLakeSettingsConfigResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeSettingsResource
+            PathPart: "config"
+
+    DataLakeSettingsConfigAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeSettingsConfigResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AdminArn", "/invocations"]]
+
+    DataLakeSettingsConfigOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeSettingsConfigResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionSettingsConfigAny:
+        DependsOn: "DataLakeSettingsConfigAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "AdminArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/admin/settings/config"]]
+
+    DataLakeSettingsGovResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeSettingsResource
+            PathPart: "governance"
+
+    DataLakeSettingsGovAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeSettingsGovResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AdminArn", "/invocations"]]
+
+    DataLakeSettingsGovOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeSettingsGovResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionSettingsGovAny:
+        DependsOn: "DataLakeSettingsGovAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "AdminArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/admin/settings/governance"]]
+
+    DataLakeSettingsGovIdResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeSettingsGovResource
+            PathPart: "{setting_id}"
+
+    DataLakeSettingsGovIdAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeSettingsGovIdResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AdminArn", "/invocations"]]
+
+    DataLakeSettingsGovIdOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeSettingsGovIdResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionSettingsGovIdAny:
+        DependsOn: "DataLakeSettingsGovIdAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "AdminArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/admin/settings/governance/{setting_id}"]]
+
+    DataLakeCartResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId:
+                Fn::GetAtt:
+                    - "DataLakeRestApi"
+                    - "RootResourceId"
+            PathPart: "cart"
+
+    DataLakeCartAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeCartResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "CartArn", "/invocations"]]
+
+    DataLakeCartOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeCartResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionCartAny:
+        DependsOn: "DataLakeCartAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "CartArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/cart"]]
+
+    DataLakeCartItemResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeCartResource
+            PathPart: "{item_id}"
+
+    DataLakeCartItemAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeCartItemResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "CartArn", "/invocations"]]
+
+    DataLakeCartItemOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeCartItemResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionCartItemAny:
+        DependsOn: "DataLakeCartItemAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "CartArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/cart/{item_id}"]]
+
+    DataLakeProfileResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId:
+                Fn::GetAtt:
+                    - "DataLakeRestApi"
+                    - "RootResourceId"
+            PathPart: "profile"
+
+    DataLakeProfileAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeProfileResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "ProfileArn", "/invocations"]]
+
+    DataLakeProfileOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeProfileResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionProfileAny:
+        DependsOn: "DataLakeProfileAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "ProfileArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/profile"]]
+
+    DataLakeProfileApikeyResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakeProfileResource
+            PathPart: "apikey"
+
+    DataLakeProfileApikeyAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeProfileApikeyResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "ProfileArn", "/invocations"]]
+
+    DataLakeProfileApikeyOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeProfileApikeyResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionProfileApikeyAny:
+        DependsOn: "DataLakeProfileApikeyAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "ProfileArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/profile/apikey"]]
+
+    DataLakeSearchResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId:
+                Fn::GetAtt:
+                    - "DataLakeRestApi"
+                    - "RootResourceId"
+            PathPart: "search"
+
+    DataLakeSearchAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeSearchResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "SearchArn", "/invocations"]]
+
+    DataLakeSearchOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakeSearchResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionSearchAny:
+        DependsOn: "DataLakeSearchAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "SearchArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/search"]]
+
+    DataLakePackageResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId:
+                Fn::GetAtt:
+                    - "DataLakeRestApi"
+                    - "RootResourceId"
+            PathPart: "packages"
+
+    DataLakePackageAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "PackageArn", "/invocations"]]
+
+    DataLakePackageOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionPackageAny:
+        DependsOn: "DataLakePackageAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "PackageArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/packages"]]
+
+    DataLakePackageIdResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakePackageResource
+            PathPart: "{package_id}"
+
+    DataLakePackageIdAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "PackageArn", "/invocations"]]
+
+    DataLakePackageIdOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionPackageIdAny:
+        DependsOn: "DataLakePackageIdAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "PackageArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/packages/{package_id}"]]
+
+    DataLakePackageIdDatasetResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakePackageIdResource
+            PathPart: "datasets"
+
+    DataLakePackageIdDatasetAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdDatasetResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "PackageArn", "/invocations"]]
+
+    DataLakePackageIdDatasetOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdDatasetResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionPackageIdDatasetAny:
+        DependsOn: "DataLakePackageIdDatasetAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "PackageArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/packages/{package_id}/datasets"]]
+
+    DataLakePackageIdDatasetIdResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakePackageIdDatasetResource
+            PathPart: "{dataset_id}"
+
+    DataLakePackageIdDatasetIdAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdDatasetIdResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "PackageArn", "/invocations"]]
+
+    DataLakePackageIdDatasetIdOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdDatasetIdResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionPackageIdDatasetIdAny:
+        DependsOn: "DataLakePackageIdDatasetIdAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "PackageArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/packages/{package_id}/datasets/{dataset_id}"]]
+
+    DataLakePackageIdDatasetIdProcessResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakePackageIdDatasetIdResource
+            PathPart: "process"
+
+    DataLakePackageIdDatasetIdProcessAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdDatasetIdProcessResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "PackageArn", "/invocations"]]
+
+    DataLakePackageIdDatasetIdProcessOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdDatasetIdProcessResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionPackageIdDatasetIdProcessAny:
+        DependsOn: "DataLakePackageIdDatasetIdProcessAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "PackageArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/packages/{package_id}/datasets/{dataset_id}/process"]]
+
+    DataLakePackageIdMetadataResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakePackageIdResource
+            PathPart: "metadata"
+
+    DataLakePackageIdMetadataAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdMetadataResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "PackageArn", "/invocations"]]
+
+    DataLakePackageIdMetadataOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdMetadataResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionPackageIdMetadataAny:
+        DependsOn: "DataLakePackageIdMetadataAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "PackageArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/packages/{package_id}/metadata"]]
+
+    DataLakePackageIdMetadataIdResource:
+        Type: "AWS::ApiGateway::Resource"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ParentId: !Ref DataLakePackageIdMetadataResource
+            PathPart: "{metadata_id}"
+
+    DataLakePackageIdMetadataIdAny:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdMetadataIdResource
+            HttpMethod: "ANY"
+            AuthorizationType: "CUSTOM"
+            AuthorizerId: !Ref DataLakeAuthorizer
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+            Integration:
+                IntegrationHttpMethod: "POST"
+                Type: "AWS_PROXY"
+                Uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "PackageArn", "/invocations"]]
+
+    DataLakePackageIdMetadataIdOptions:
+        Type: "AWS::ApiGateway::Method"
+        Properties:
+            RestApiId: !Ref DataLakeRestApi
+            ResourceId: !Ref DataLakePackageIdMetadataIdResource
+            HttpMethod: "OPTIONS"
+            AuthorizationType: "NONE"
+            MethodResponses:
+                -
+                    StatusCode: 200
+                    ResponseModels:
+                        application/json: Empty
+                    ResponseParameters:
+                        method.response.header.Access-Control-Allow-Headers: true
+                        method.response.header.Access-Control-Allow-Methods: true
+                        method.response.header.Access-Control-Allow-Origin: true
+            Integration:
+                Type: "MOCK"
+                RequestTemplates:
+                    application/json: "{\"statusCode\":200}"
+                IntegrationResponses:
+                    -
+                        StatusCode: 200
+                        ResponseParameters:
+                            method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                            method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                            method.response.header.Access-Control-Allow-Origin: "'*'"
+
+    LambdaInvokePermissionPackageIdMetadataIdAny:
+        DependsOn: "DataLakePackageIdMetadataIdAny"
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "PackageArn"
+            Action: "lambda:InvokeFunction"
+            Principal: "apigateway.amazonaws.com"
+            SourceArn: !Join ["", ["arn:aws:execute-api:", Ref: "AWS::Region",":", Ref: "AWS::AccountId", ":", !Ref DataLakeRestApi,"/*/*/packages/{package_id}/metadata/{metadata_id}"]]
+
+Outputs:
+    ApiId:
+        Description: "Id of data lake API"
+        Value: !Ref DataLakeRestApi

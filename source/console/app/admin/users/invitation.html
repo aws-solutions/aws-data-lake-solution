@@ -1,0 +1,26 @@
+<h1>Create a user invitation</h1>
+<p>Create a new user invitation by entering the user's name, email and role.</p>
+<section class="awsui-util-mt-l">
+    <awsui-alert type="error" ng-show="showCreateError">
+        <span dom-region="header">Service Error </span>
+        <span dom-region="content">An unexpected error occured when attempting to create the user invite.</span>
+    </awsui-alert>
+    <form name="newInviteForm" novalidate ng-submit="createInvitation(newinvite, newInviteForm.$valid)">
+        <awsui-control-group validation-message="{{ newInviteForm.name.$touched && newInviteForm.name.$invalid ? 'Name is required!' : '' }}" label="Name">
+            <awsui-textfield name="name" ng-model="newinvite.name" required data-disabled="false" ></awsui-textfield>
+        </awsui-control-group>
+        <awsui-control-group validation-message="{{ newInviteForm.email.$touched && newInviteForm.email.$invalid ? 'A valid email address is required!' : '' }}" label="Email">
+            <awsui-textfield name="email" ng-model="newinvite.email" required ng-pattern='/^(([^<>()\[\]\.,;:\s@\"]+(\.[^<>()\[\]\.,;:\s@\"]+)*)|(\".+\"))@(([^<>()[\]\.,;:\s@\"]+\.)+[^<>()[\]\.,;:\s@\"]{2,})$/i' data-disabled="false" ></awsui-textfield>
+        </awsui-control-group>
+        <awsui-control-group validation-message="{{ newInviteForm.email.$touched && newInviteForm.role.$invalid ? 'Role is required!' : '' }}" label="Role">
+            <awsui-select name="role" data-disabled="false" ng-model="newinvite.role" required placeholder="Select a role..." items="roles"></awsui-select>
+        </awsui-control-group>
+        <h1></h1>
+        <awsui-control-group>
+            <div class="text-right">
+                <awsui-button text="Cancel" variant="link" href="#/admin/users"></awsui-button>
+                <awsui-button variant="primary" type="submit" text="Create Invitation"></awsui-button>
+            </div>
+        </awsui-control-group>
+    </form>
+</section>

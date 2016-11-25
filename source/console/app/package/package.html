@@ -1,0 +1,282 @@
+<div ng-show="newPackage">
+    <h1 style="line-height:40px;">
+        <span>Create a Package</span>
+        <awsui-button class="awsui-util-f-r" icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/user-guide/working-with-packages"></awsui-button>
+    </h1>
+    <p>Create a data lake package to store and share your dataset. Begin by typing a package name and a description for your dataset.</p>
+    <section class="awsui-util-mt-l">
+        <awsui-alert type="error" ng-show="showCreateError" dismiss="showCreateError=false">
+            <span dom-region="header">Service Error </span>
+            <span dom-region="content">{{createErrorMessage}}</span>
+        </awsui-alert>
+        <form name="newPackageForm" novalidate ng-submit="createPackage(newpackage, newPackageForm.$valid)">
+            <awsui-control-group validation-message="{{ newPackageForm.name.$touched && newPackageForm.name.$invalid ? 'Name is required!' : '' }}" label="Package Name*">
+                <awsui-textfield name="name" ng-model="newpackage.name" required data-disabled="false" placeholder="100 character limit"></awsui-textfield>
+            </awsui-control-group>
+            <awsui-control-group validation-message="{{ newPackageForm.description.$touched && newPackageForm.description.$invalid ? 'Description is required!' : '' }}" label="Description*">
+                <awsui-textarea rows="8" name="description" data-disabled="false" required ng-model="newpackage.description" placeholder="1000 character limit"></awsui-textarea>
+            </awsui-control-group>
+            <div ng-repeat="item in metadataGovernance">
+                <awsui-control-group validation-message="" label="{{item.governance === 'Required' ? item.tag + '*' : item.tag}}">
+                    <awsui-textfield name="{{item.tag}}" data-disabled="false" ng-model="item.value"></awsui-textarea>
+                </awsui-control-group>
+            </div>
+            <awsui-control-group>
+                <p>* required</p>
+            </awsui-control-group>
+            <h1></h1>
+            <awsui-control-group>
+                <div class="text-right">
+                    <awsui-button text="Cancel" variant="link" href="#/dashboard"></awsui-button>
+                    <awsui-button type="submit" variant="primary" text="Create package"></awsui-button>
+                </div>
+            </awsui-control-group>
+        </form>
+    </section>
+</div>
+<div ng-show="!newPackage">
+    <h1>Data Lake Package</h1>
+    <p>Manage the data lake package. Create and edit package details, metadata or dataset files.</p>
+    <section class="awsui-util-mt-l">
+        <awsui-alert type="error" ng-show="showError" dismiss="showError=false">
+            <span dom-region="header">Service Error </span>
+            <span dom-region="content">{{errorMessage}}</span>
+        </awsui-alert>
+        <form name="packageForm" ng-show="pckg" novalidate>
+            <div class="awsui-util-mb-xl">
+                <awsui-button text="Cancel" href="#/dashboard"></awsui-button>
+                <awsui-button variant="primary" text="Save" ng-click="updatePackage(pckg, packageForm.$valid)" ng-show="canEdit"></awsui-button>
+                <awsui-button text="Add to cart" ng-click="addToCart(pckg)"></awsui-button>
+                <awsui-button-group class="awsui-util-f-r">
+                    <awsui-button icon="refresh" ng-click="refresh()"></awsui-button>
+                    <awsui-button icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/index.html"></awsui-button>
+                </awsui-button-group>
+            </div>
+            <awsui-tabs tabs="tabs" ng-model="currentTab">
+                <div ng-switch="currentTab">
+                    <div ng-switch-when="tab_overview">
+                        <section ng-if="packageId != 0">
+                            <h2>Details</h2>
+                            <div style="max-width:900px">
+                                <awsui-control-group label="Package ID">{{pckg.package_id}}</awsui-control-group>
+                                <awsui-control-group validation-message="{{ packageForm.name.$touched && packageForm.name.$invalid ? 'Name is required!' : '' }}" label="Package Name*">
+                                    <awsui-textfield name="name" ng-model="pckg.name" required data-disabled="false" placeholder="100 character limit"></awsui-textfield>
+                                </awsui-control-group>
+                                <awsui-control-group validation-message="" label="Description">
+                                    <awsui-textarea rows="8" name="description" data-disabled="false" ng-model="pckg.description" placeholder="1000 character limit"></awsui-textarea>
+                                </awsui-control-group>
+                            </div>
+                            <h2 class="awsui-util-mt-xl">Metadata</h2>
+                            <div class="center-text" ng-show="pckgMetadata.metadata.length == 0">
+                                <label>No metadata currently associated.</label>
+                            </div>
+                            <table ng-show="pckgMetadata.metadata.length != 0">
+                                <tr>
+                                    <th>Tag</th>
+                                    <th>Value</th>
+                                </tr>
+                                <tr ng-repeat="item in pckgMetadata.metadata">
+                                    <td class="awsui-util-pr-l">
+                                        <awsui-label type="info" label="{{item.tag}}"></awsui-label>
+                                    </td>
+                                    <td>
+                                        {{item.value}}
+                                    </td>
+                                </tr>
+                            </table>
+                        </section>
+                        <section class="awsui-util-mt-l">
+                            <awsui-alert type="error" dismiss="invalidMetadata=false" ng-show="invalidMetadata" dismissible="true">
+                                <span dom-region="header">Metadata Error</span>
+                                <span dom-region="content">Metadata tags must be between 1 and 127 characters and can't contain spaces.</span>
+                            </awsui-alert>
+                            <table ng-show="newMetadata.length > 0">
+                                <tr>
+                                    <th>Tag</th>
+                                    <th></th>
+                                    <th>Value</th>
+                                    <th></th>
+                                </tr>
+                                <tr ng-repeat="metadata in newMetadata">
+                                    <td>
+                                        <awsui-textfield ng-model="metadata.tag" placeholder="Name" input="validateTag(metadata)"></awsui-textfield>
+                                    </td>
+                                    <td width="25">
+                                        <span ng-show="metadata.invalid" class="awsui-icon awsui-icon-big alert-exclamation-triangle"></span>
+                                    </td>
+                                    <td>
+                                        <awsui-textfield ng-model="metadata.value" placeholder="Value"></awsui-textfield>
+                                    </td>
+                                    <td>
+                                        <awsui-button icon="times" text="" form-action="submit" variant="standalone-icon"
+                                                      label="remove"
+                                                      ng-click="removeMetadata($index)"></awsui-button>
+                                    </td>
+                                </tr>
+
+                            </table>
+                            <awsui-button icon="plus-circle" ng-click="addMetadata()" text="Add Metadata" variant="link" ng-show="canEdit"></awsui-button>
+                        </section>
+                        <awsui-expandable-section class="awsui-util-mt-l" header="Remove the package" ng-show="canEdit">
+                            <awsui-button class="awsui-util-mt-m" variant="danger"  text="Delete Package" ng-click="removePackage()"></awsui-button>
+                        </awsui-expandable-section>
+                    </div>
+                    <div ng-switch-when="tab_content">
+                        <section ng-if="packageId != 0">
+                            <h2>Content</h2>
+                            <div class="center-text" ng-show="pckgContent.length == 0">
+                                <label>No datasets available.</label>
+                            </div>
+                            <table ng-show="pckgContent.length != 0">
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Name</th>
+                                    <th>Type</th>
+                                    <th>By</th>
+                                    <th>Date</th>
+                                    <th></th>
+                                </tr>
+                                <tr ng-repeat="c in pckgContent">
+                                    <td>{{c.dataset_id}}</td>
+                                    <td>
+                                        {{c.name}}
+                                        <awsui-tooltip position="right" text="s3://{{c.s3_bucket}}/{{c.s3_key}}">
+                                            <i class="awsui-icon info-circle"></i>
+                                        </awsui-tooltip>
+                                    </td>
+                                    <td>{{c.content_type}}</td>
+                                    <td>{{c.owner}}</td>
+                                    <td>{{c.created_at | date:'medium'}}</td>
+                                    <td>
+                                        <awsui-button icon="times" text="" variant="standalone-icon"
+                                                      label="remove"
+                                                      ng-click="removeDataset(c.dataset_id)"></awsui-button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </section>
+                        <section class="awsui-util-mt-l">
+                            <table ng-show="newContent.length > 0">
+                                <th>File Name</th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <tr ng-repeat="content in newContent">
+                                    <td>
+                                        <awsui-textfield ng-model="content.file.name" data-disabled="true"></awsui-textfield>
+                                    </td>
+                                    <td width="25">
+                                        <span ng-show="content.invalid"
+                                              class="awsui-icon awsui-icon-big alert-exclamation-triangle"></span>
+                                    </td>
+                                    <td width="20">
+                                        <awsui-button icon="folder-open" text="" variant="standalone-icon"
+                                                      label="select file"
+                                                      ng-click="selectContent($index)"></awsui-button>
+                                    </td>
+
+                                    <td width="20">
+                                        <awsui-button icon="times" text="" variant="standalone-icon"
+                                                      label="remove"
+                                                      ng-click="removeFile($index)"></awsui-button>
+                                    </td>
+                                </tr>
+                            </table>
+                            <awsui-button icon="plus-circle" ng-click="addFile()" text="Publish a local file"
+                                          variant="link" ng-show="newContent.length == 0 && canEdit"></awsui-button>
+
+                            <input id="fileDialog" type="file" ng-show="false"
+                                   onchange="angular.element(this).scope().fileNameChanged(this)">
+                        </section>
+                        <section ng-if="pckgManifest.length != 0" class="awsui-util-mt-l">
+                            <h2>Manifest</h2>
+                            <table>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>By</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                                <tr ng-repeat="c in pckgManifest">
+                                    <td>
+                                        {{c.name}}
+                                        <awsui-tooltip position="right" text="s3://{{c.s3_bucket}}/{{c.s3_key}}">
+                                            <i class="awsui-icon info-circle"></i>
+                                        </awsui-tooltip>
+                                    </td>
+                                    <td>{{c.owner}}</td>
+                                    <td>{{c.created_at | date:'medium'}}</td>
+                                    <td><span class="{{c.state_desc == 'Processed' ? 'awsui-status-positive' : 'awsui-status-warning'}}">{{c.state_desc}}</span></td>
+                                    <td>
+                                        <awsui-button icon="times" text="" variant="standalone-icon"
+                                                      label="remove"
+                                                      ng-click="removeDataset(c.dataset_id)"></awsui-button>
+                                    </td>
+                                </tr>
+                            </table>
+                        </section>
+                        <section ng-if="pckgManifest.length == 0" class="awsui-util-mt-l">
+                            <table ng-show="newLink.length > 0">
+                                <th>
+                                    Manifest File
+                                    <div>
+                                        <small style="font-weight:normal;">Upload a manifest file with the location of existing datasets in Amazon S3 to link to the package. <a href="http://docs.awssolutionsbuilder.com/data-lake/user-guide/working-with-packages/" target="_blank">Learn more.</a></small>
+                                    </div>
+                                </th>
+                                <th></th>
+                                <th></th>
+                                <th></th>
+                                <tr ng-repeat="link in newLink">
+                                    <td>
+                                        <awsui-textfield ng-model="link.file.name" data-disabled="true"></awsui-textfield>
+                                    </td>
+                                    <td width="25">
+                                        <span ng-show="link.invalid"
+                                              class="awsui-icon awsui-icon-big alert-exclamation-triangle"></span>
+                                    </td>
+                                    <td width="20">
+                                        <awsui-button icon="folder-open" text="" variant="standalone-icon"
+                                                      label="select file"
+                                                      ng-click="selectLink($index)"></awsui-button>
+                                    </td>
+
+                                    <td width="20">
+                                        <awsui-button icon="times" text="" variant="standalone-icon"
+                                                      label="remove"
+                                                      ng-click="removeLinkManifest($index)"></awsui-button>
+                                    </td>
+                                </tr>
+                            </table>
+                            <awsui-button icon="plus-circle" ng-click="addLinkManifest()" text="Link existing S3 content"
+                                          variant="link" ng-show="newLink.length == 0 && canEdit"></awsui-button>
+
+                            <input id="linkDialog" type="file" ng-show="false"
+                                   onchange="angular.element(this).scope().linkNameChanged(this)">
+                        </section>
+                    </div>
+                    <div ng-switch-when="tab_history">
+                        <div ng-if="packageId != 0">
+                            <h2>History</h2>
+                            <div ng-repeat="logitem in log" class="awsui-util-pb-l">
+                                <label>{{logitem.entrydt | date:'medium'}}</label>
+                                <div ng-repeat="entry in logitem.entries">
+                                    <div ng-bind-html="trustSnippet(entry)"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </awsui-tabs>
+        </form>
+        <awsui-modal visible="showDeleteModal" header="Delete package">
+            <span dom-region="content">
+                <p>You are about to <b class="awsui-status-negative">delete</b> the package, this will remove the package entry from the data lake. It <b>will not delete</b> the dataset files from Amazon S3. Do you want to proceed?</p>
+            </span>
+            <span dom-region="footer">
+                <awsui-button text="Delete" variant="danger" class="awsui-util-f-r" ng-click="deletePackage(pckg.package_id)"></awsui-button>
+                <awsui-button text="Cancel" variant="link" class="awsui-util-f-r" ng-click="closeDeleteModal()"></awsui-button>
+            </span>
+        </awsui-modal>
+    </section>
+</div>

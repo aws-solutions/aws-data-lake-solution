@@ -1,0 +1,49 @@
+<div id="theme-gradient"></div>
+<main>
+    <div class="login-wrapper">
+        <form name="confirmForm" novalidate ng-submit="setPassword(newuser, confirmForm.$valid)">
+    		<div class="panel panel-bordered z-depth-1">
+    			<div class="panel-header">
+    				<h2 class="font-weight-200">
+    					Data<b class="main-text font-weight-200">Lake</b>
+    				</h2>
+    			</div>
+
+    			<div class="panel-body">
+                    <p class="text-muted text-center">Your first time logging in. Set your Data Lake password.</p>
+                    <div class="form-group" ng-show="errormessage">
+                        <div class="has-error">
+                            <p class="help-block text-center">{{errormessage}}</p>
+                        </div>
+                    </div>
+                    <div class="form-group " ng-class="{ 'has-error': confirmForm.newPassword.$touched && confirmForm.newPassword.$invalid }">
+                        <input name="password" class="form-control no-gutter" ng-model="newuser.newPassword" required placeholder="Password" type="password" ng-pattern="/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/">
+                        <div class="help-block" ng-messages="confirmForm.newPassword.$error" ng-if="confirmForm.newPassword.$touched">
+                            <p ng-message="required">This field is required</p>
+                            <p ng-message="pattern">Password must be at least 8 characters, and must include at least one upper case letter, one lower case letter, and one numeric digit.</p>
+                        </div>
+                    </div>
+                    <div class="form-group " ng-class="{ 'has-error': signupForm.confirmPassword.$touched && signupForm.confirmPassword.$invalid }">
+                        <input name="confirmPassword" class="form-control no-gutter" ng-model="newuser.confirmPassword" required placeholder="Confirm Password" type="password" compare-to="newuser.newPassword">
+                        <div class="help-block" ng-messages="confirmForm.confirmPassword.$error" ng-if="confirmForm.confirmPassword.$touched">
+                            <p ng-message="required">This field is required</p>
+                            <p ng-message="compareTo">Must match the previous entry</p>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        Password must be at least 8 characters, and must include at least one upper case letter, one lower case letter, and one numeric digit.
+                    </div>
+
+    			</div>
+
+    			<div class="panel-footer">
+    				<div class="text-center">
+    					<button type="submit" class="btn btn-primary" style="min-width:100px;">
+    						Set Password
+    					</button>
+    				</div>
+    			</div>
+    		</div>
+        </form>
+    </div>
+</main>

@@ -1,0 +1,84 @@
+<div id="theme-gradient"></div>
+<main>
+    <div class="login-wrapper">
+        <form name="forgotForm" ng-show="!showVerification" novalidate ng-submit="forgotPassword(forgotuser, forgotForm.$valid)">
+            <div class="panel panel-bordered z-depth-1">
+                <div class="panel-header">
+                    <h2 class="font-weight-200">
+                        Data<b class="main-text font-weight-200">Lake</b>
+                    </h2>
+                </div>
+                <div class="panel-body">
+                    <p class="text-muted text-center">Do you want to reset your password? Enter your email address.</p>
+                    <div class="form-group" ng-show="errormessage">
+                        <div class="has-error">
+                            <p class="help-block text-center">{{errormessage}}</p>
+                        </div>
+                    </div>
+                    <div class="form-group " ng-class="{ 'has-error': forgotForm.email.$touched && forgotForm.email.$invalid }">
+                        <input name="email" class="form-control no-gutter" ng-model="forgotuser.email" required placeholder="Email" type="email">
+                        <div class="help-block" ng-messages="forgotForm.email.$error" ng-if="forgotForm.email.$touched">
+                            <p ng-message="required">This field is required</p>
+                            <p ng-message="email">This needs to be a valid email</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel-footer">
+                    <div class="text-center">
+                        <button type="submit" class="btn btn-primary" style="min-width:100px;">
+                            Reset Password
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+        <form name="verificationForm" ng-show="showVerification" novalidate ng-submit="changePassword(user, verificationForm.$valid)">
+    		<div class="panel panel-bordered z-depth-1">
+    			<div class="panel-header">
+    				<h2 class="font-weight-200">
+    					Data<b class="main-text font-weight-200">Lake</b>
+    				</h2>
+    			</div>
+
+    			<div class="panel-body">
+                    <p class="text-muted text-center">Change your Data Lake password.</p>
+                    <div class="form-group" ng-show="errormessage">
+                        <div class="has-error">
+                            <p class="help-block text-center">{{errormessage}}</p>
+                        </div>
+                    </div>
+                    <div class="form-group " ng-class="{ 'has-error': verificationForm.email.$touched && verificationForm.email.$invalid }">
+                        <input name="email" class="form-control no-gutter" ng-model="user.email" required placeholder="Email" type="email">
+                        <div class="help-block" ng-messages="verificationForm.email.$error" ng-if="verificationForm.email.$touched">
+                            <p ng-message="required">This field is required</p>
+                            <p ng-message="email">This needs to be a valid email</p>
+                        </div>
+                    </div>
+                    <div class="form-group " ng-class="{ 'has-error': verificationForm.verificationCode.$touched && verificationForm.verificationCode.$invalid }">
+                        <input name="verificationCode" class="form-control no-gutter" ng-model="user.verificationCode" required placeholder="Verification Code" type="text">
+                        <div class="help-block" ng-messages="verificationForm.verificationCode.$error" ng-if="verificationForm.verificationCode.$touched">
+                            <p ng-message="required">This field is required</p>
+                        </div>
+                    </div>
+                    <div class="form-group " ng-class="{ 'has-error': verificationForm.password.$touched && verificationForm.password.$invalid }">
+                        <input name="password" class="form-control no-gutter" ng-model="user.password" required placeholder="Password" type="password" ng-pattern="/^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,}$/">
+                        <div class="help-block" ng-messages="verificationForm.password.$error" ng-if="verificationForm.password.$touched">
+                            <p ng-message="required">This field is required</p>
+                            <p ng-message="pattern">Password must be at least 8 characters, and must include at least one upper case letter, one lower case letter, and one numeric digit.</p>
+                        </div>
+                    </div>
+                    <div class="alert alert-info">
+                        Password must be at least 8 characters, and must include at least one upper case letter, one lower case letter, and one numeric digit.
+                    </div>
+    			</div>
+    			<div class="panel-footer">
+    				<div class="text-center">
+    					<button type="submit" class="btn btn-primary" style="min-width:100px;">
+    						Change Password
+    					</button>
+    				</div>
+    			</div>
+    		</div>
+        </form>
+    </div>
+</main>

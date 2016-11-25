@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html lang="en" class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html lang="en" class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html lang="en" class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html lang="en" class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <title>Data Lake</title>
+        <meta name="description" content="">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link rel="icon" type="image/ico" href="/images/favicon.ico">
+        <link href="//fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+        <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
+        <link rel="stylesheet" href="/lib/bower_components/bootstrap/dist/css/bootstrap.min.css">
+        <link rel="stylesheet" href="/lib/aws-ui/AWS-UI-Components/components.css" />
+        <link rel="stylesheet" href="/lib/aws-ui/AWS-UI-Components/base-styles/utilities.css" />
+        <link rel="stylesheet" href="/lib/aws-ui/AWS-UI-Components/base-styles/grid.css" />
+        <link rel="stylesheet" href="/lib/aws-ui/AWS-UI-Components/base-styles/home.css" />
+        <link rel="stylesheet" href="/styles/main.css" />
+        <link rel="stylesheet" href="/lib/bower_components/angular-block-ui/dist/angular-block-ui.min.css"/>
+    </head>
+    <body class="block-ui">
+
+        <div ng-app="dataLake">
+            <ui-view></ui-view>
+        </div>
+
+        <!-- In production use:
+        <script src="//ajax.googleapis.com/ajax/libs/angularjs/x.x.x/angular.min.js"></script>
+        -->
+
+        <script src="/lib/bower_components/aws-sdk/dist/aws-sdk.min.js"></script>
+        <script src="/lib/bower_components/jsbn/jsbn.js"></script>
+        <script src="/lib/bower_components/jsbn/jsbn2.js"></script>
+        <script src="/lib/bower_components/sjcl/sjcl.js"></script>
+        <script type="text/javascript" src="/lib/bower_components/moment/min/moment.min.js"></script>
+        <script src="/lib/cognito/aws-cognito-sdk.min.js"></script>
+        <script src="/lib/cognito/amazon-cognito-identity.min.js"></script>
+        <script type="text/javascript" src="/lib/app-variables.js"></script>
+
+        <script type="text/javascript" src="/lib/bower_components/underscore/underscore-min.js"></script>
+
+        <script src="/lib/bower_components/angular/angular.js"></script>
+        <script src="/lib/bower_components/angular-resource/angular-resource.min.js"></script>
+        <script src="/lib/bower_components/angular-ui-router/release/angular-ui-router.min.js"></script>
+        <script src="/lib/bower_components/angular-messages/angular-messages.min.js"></script>
+
+        <!-- <script src="bower_components/angular-route/angular-route.js"></script> -->
+        <script src="/lib/aws-ui/AWS-UI-Components/components.js"></script>
+        <script src="/lib/aws-ui/AWS-UI-Components-Angular/index.js"></script>
+
+        <script src="app.js"></script>
+        <script src="common/factories/utils.js"></script>
+        <script src="common/services/AuthService.js"></script>
+        <script src="common/factories/searchFactory.js"></script>
+        <script src="common/factories/adminFactory.js"></script>
+        <script src="common/factories/packageFactory.js"></script>
+        <script src="common/factories/cartFactory.js"></script>
+        <script src="common/factories/profileFactory.js"></script>
+        <script src="signin/signin.js"></script>
+        <script src="confirm/confirm.js"></script>
+        <script src="forgot/forgot.js"></script>
+        <script src="main/main.js"></script>
+        <script src="profile/profile.js"></script>
+        <script src="profile/changePassword.js"></script>
+        <script src="dashboard/dashboard.js"></script>
+        <script src="package/package.js"></script>
+        <script src="search/search.js"></script>
+        <script src="cart/cart.js"></script>
+        <script src="admin/users/invitation.js"></script>
+        <script src="admin/users/users.js"></script>
+        <script src="admin/users/user.js"></script>
+        <script src="admin/settings/settings.js"></script>
+        <script src="common/components/version/version.js"></script>
+        <script src="common/components/version/version-directive.js"></script>
+        <script src="common/components/compareTo/compareTo-directive.js"></script>
+        <script src="common/components/goclick/goclick-directive.js"></script>
+        <script src="common/components/version/interpolate-filter.js"></script>
+        <div block-ui-container="" class="block-ui-container">
+            <div class="block-ui-overlay"></div>
+            <div class="block-ui-message-container" aria-live="assertive" aria-atomic="true">
+                <div class="block-ui-message ng-binding" ng-class="$_blockUiMessageClass">Loading ...</div>
+            </div>
+        </div>
+    </body>
+</html>

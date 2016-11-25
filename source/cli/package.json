@@ -1,0 +1,26 @@
+{
+    "name": "datalake",
+    "version": "0.1.0",
+    "description": "Data Lake Command Line Interface",
+    "main": "datalake.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "bin": {
+        "datalake": "datalake.js"
+    },
+    "keywords": [
+        "AWS",
+        "Data",
+        "Lake",
+        "CLI"
+    ],
+    "author": "aws-solutions-builder",
+    "license": "Amazon Software License",
+    "dependencies": {
+        "commander": "^2.9.0",
+        "js-base64": "*",
+        "request": "*",
+        "moment": "*"
+    }
+}

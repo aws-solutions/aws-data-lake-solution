@@ -1,0 +1,103 @@
+<h1>My Cart</h1>
+<p>Manage your collection of data lake packages you would like to access. To create a manifest file for the packages in your cart, click the checkout button.</p>
+<section class="awsui-util-mt-l" ng-show="showerror">
+    <awsui-alert type="error">
+      <span dom-region="header">Service error</span>
+      <span dom-region="content">An unexpected error has occured while retrieving users.</span>
+    </awsui-alert>
+</section>
+<div class="clearfix">
+    <awsui-button variant="primary" text="Generate Manifest" ng-click="checkout()" data-disabled="cart.length === 0"></awsui-button>
+    <awsui-button-group class="awsui-util-f-r">
+        <awsui-button icon="refresh" ng-click="refresh()"></awsui-button>
+        <awsui-button icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/user-guide/working-with-my-cart"></awsui-button>
+    </awsui-button-group>
+</div>
+<section class="awsui-util-mt-l">
+    <awsui-tabs tabs="tabs" ng-model="currentTab">
+        <div ng-switch="currentTab">
+            <div ng-switch-when="tab_pending">
+                <table class="grid">
+                    <tbody ng-show="cart.length > 0">
+                        <tr>
+                            <th>Package</th>
+                            <th>Status</th>
+                            <th class="awsui-util-t-c">Remove</th>
+                        </tr>
+                        <tr ng-repeat="item in cart">
+                            <td style="padding-bottom:20px; padding-top:20px;">
+                                <div><b>{{item.name}}</b><a class='awsui-util-ml-s' href='#package/{{item.package_id}}'><i class="fa fa-external-link"></i></a></div>
+                                <div class="awsui-text-small"><i>{{item.description}}</i></div>
+                            </td>
+                            <td>
+                                <div>
+                                    {{item.cart_item_status === 'unable_to_process' ? 'Failed' : 'Pending'}}
+                                    <awsui-tooltip ng-show="item.cart_item_status === 'unable_to_process'" position="left" text="{{item.status_details}}">
+                                        <i class="awsui-icon info-circle"></i>
+                                    </awsui-tooltip>
+                                </div>
+                            </td>
+                            <td class="awsui-util-t-c" style="width:100px; padding-bottom:20px; padding-top:20px;">
+                                <awsui-button icon="times" text="" variant="standalone-icon"
+                                              label="remove"
+                                              ng-click="removeCartItem(item.item_id)"></awsui-button>
+                            </td>
+                        </tr>
+                    </tbody>
+                    <tbody ng-show="cart.length == 0">
+                        <tr>
+                            <td colspan="2">
+                                <label>No items in your cart.</label>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div ng-switch-when="tab_manifests">
+                <table class="grid">
+                    <tbody ng-show="manifests.length > 0">
+                        <tr>
+                            <th>Package</th>
+                            <th>Expires</th>
+                        </tr>
+                        <tr ng-repeat="item in manifests">
+                            <td style="padding-bottom:20px; padding-top:20px;">
+                                <div><b>{{item.name}}</b><a class='awsui-util-ml-s' href='#package/{{item.package_id}}'><i class="fa fa-external-link"></i></a></div>
+                                <div class="awsui-text-small"><i>{{item.description}}</i></div>
+                                <div class="pull-left awsui-util-mr-s">[ <a target="_blank" href="{{item.url}}">download link</a> ]</div>
+                                <div class="pull-left">[ {{item.format === 'bucket-key' ? 'Amazon S3 Bucket/Key' : 'Signed URLs'}} ]</div>
+                            </td>
+                            <td>{{item.expires | date: 'medium'}}</td>
+                        </tr>
+                    </tbody>
+                    <tbody ng-show="manifests.length == 0">
+                        <tr>
+                            <td colspan="2">
+                                <label>No manifests available cart.</label>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </awsui-tabs>
+</section>
+<awsui-modal visible="showCheckoutModal" header="Manifest Type">
+    <span dom-region="content">
+        <p>Select the contents of your manifest file.</p>
+        <awsui-radio-group ng-model="manifestType">
+            <awsui-radio-button value="signed-url" label="Amazon S3 Signed URLs"></awsui-radio-button>
+            <awsui-radio-button value="bucket-key" label="Amazon S3 Bucket/Keys"></awsui-radio-button>
+        </awsui-radio-group>
+        <section class="awsui-util-mt-l" ng-show="manifestType === 'bucket-key'">
+            <awsui-alert type="info">
+              <span dom-region="header">Amazon S3 Permissions</span>
+              <span dom-region="content">When using Amazon S3 bucket/keys in your manifest file, you will need to ensure you have the appropriate GET permissions on the content to access. Contact your administrator with additional questions.</span>
+            </awsui-alert>
+        </section>
+    </span>
+    <span dom-region="footer">
+        <awsui-button text="Generate" variant="primary" class="awsui-util-f-r" ng-click="generateManifest(manifestType)"></awsui-button>
+        <awsui-button text="Cancel" variant="link" class="awsui-util-f-r" ng-click="closeCheckoutModal()"></awsui-button>
+    </span>
+</awsui-modal>

@@ -1,0 +1,21 @@
+{
+    "name": "data-lake-console",
+    "description": "A user interface console for the Data Lake solution",
+    "version": "0.1.0",
+    "private": true,
+    "dependencies": {
+        "angular": "~1.5.8",
+        "angular-ui-router": "~0.3.1",
+        "angular-messages": "~1.5.8",
+        "angular-loader": "~1.5.8",
+        "angular-mocks": "~1.5.8",
+        "angular-resource": "~1.5.8",
+        "bootstrap": "~3.3",
+        "aws-sdk": "*",
+        "moment": "*",
+        "underscore": "*",
+        "jsbn": "*",
+        "sjcl": "*",
+        "angular-block-ui": "*"
+    }
+}

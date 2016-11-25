@@ -1,0 +1,50 @@
+<h1>User Management</h1>
+<p>Manage the users of the data lake. Begin by selecting a user you want to manage.</p>
+<section class="awsui-util-mt-l" ng-show="showerror">
+    <awsui-alert type="error">
+      <span dom-region="header">Service error</span>
+      <span dom-region="content">An unexpected error has occured while retrieving users.</span>
+    </awsui-alert>
+</section>
+<div class="clearfix">
+    <awsui-button variant="primary" text="Invite User" href="#admin/invite"></awsui-button>
+    <awsui-button-group class="awsui-util-f-r">
+        <awsui-button icon="refresh" ng-click="refresh()"></awsui-button>
+        <awsui-button icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/admin-guide/working-with-users"></awsui-button>
+    </awsui-button-group>
+</div>
+<section class="awsui-util-mt-l">
+    <table class="grid">
+        <thead>
+            <th></th>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Enabled</th>
+            <th>Registration Status</th>
+        </thead>
+        <tbody ng-show="users.length > 0">
+            <tr ng-repeat="user in users">
+                <td style="width:25px;">
+                    <awsui-button icon="pencil" text="" variant="standalone-icon"
+                                  label="remove" href="#admin/users/{{user.user_id}}"></awsui-button>
+                </td>
+                <td>{{user.email}}</td>
+                <td>{{user.name}}</td>
+                <td>{{user.role}}</td>
+                <td>
+                    <awsui-label label="True" type="success" ng-show="user.enabled"></awsui-label>
+                    <awsui-label label="False" type="disabled" ng-show="!user.enabled"></awsui-label>
+                </td>
+                <td><span class="{{user.status == 'CONFIRMED' ? 'awsui-status-positive' : 'awsui-status-warning'}}">{{user.status == 'CONFIRMED' ? 'Confirmed' : 'Pending'}}</span></td>
+            </tr>
+        </tbody>
+        <tbody ng-show="users.length == 0">
+            <tr>
+                <td colspan="5">
+                    <label>No users available.</label>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</section>

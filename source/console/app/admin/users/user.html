@@ -1,0 +1,96 @@
+<awsui-breadcrumb-group>
+    <awsui-breadcrumb-item text="Users" href="#admin/users"></awsui-breadcrumb-item>
+    <awsui-breadcrumb-item text="{{user.user_id}}" href="#admin/users/{{user.user_id}}"></awsui-breadcrumb-item>
+</awsui-breadcrumb-group>
+<h1>{{title}}</h1>
+<p>{{subtitle}}</p>
+<section class="awsui-util-mt-l" ng-show="!user_found">
+    <awsui-alert type="error">
+        The user [{{user_id}}] is not found.
+    </awsui-alert>
+</section>
+<section class="awsui-util-mt-l" ng-show="showerror">
+    <awsui-alert type="error">
+      <span dom-region="header">Service error</span>
+      <span dom-region="content">{{showErrorMessage}}</span>
+    </awsui-alert>
+</section>
+<section class="awsui-util-mt-l" ng-cloak ng-show="user_found">
+    <form name="userEditForm" novalidate ng-submit="modifyUser(user, userEditForm.$valid)">
+        <div class="awsui-util-mb-xl">
+            <awsui-button text="Cancel" href="#/admin/users"></awsui-button>
+            <awsui-button variant="primary" text="Save" ng-click="updateUser('update')"></awsui-button>
+            <awsui-button variant="danger" text="Disable User" ng-show="user.enabled" ng-click="updateUser('disable')"></awsui-button>
+            <awsui-button variant="" text="Enable User" ng-show="!user.enabled" ng-click="updateUser('enable')"></awsui-button>
+            <awsui-button class="awsui-util-f-r" icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/admin-guide/working-with-users"></awsui-button>
+        </div>
+        <awsui-tabs tabs="tabs" ng-model="currentTab">
+            <div ng-switch="currentTab">
+                <div ng-switch-when="tab_details">
+                    <awsui-control-group label="User ID">
+                        {{user.user_id}}
+                    </awsui-control-group>
+                    <awsui-control-group validation-message="" label="Name">
+                        {{user.display_name}}
+                    </awsui-control-group>
+                    <awsui-control-group validation-message="" label="Email">
+                        {{user.email}}
+                    </awsui-control-group>
+                    <awsui-control-group validation-message="" label="Role">
+                        <awsui-select data-disabled="false"  ng-model="user.role" placeholder="Select a role..." items="roles"></awsui-select>
+                    </awsui-control-group>
+                    <awsui-control-group label="Created">
+                        {{user.created_at | moment:"MMM Do YYYY, h:mm:ss a"}}
+                    </awsui-control-group>
+                    <awsui-control-group label="Last Updated">
+                        {{user.updated_at | moment:"MMM Do YYYY, h:mm:ss a"}}
+                    </awsui-control-group>
+                    <awsui-expandable-section class="awsui-util-mt-l" header="Delete User">
+                        <awsui-button class="awsui-util-mt-m" variant="danger" text="Delete" ng-click="removeUser()"></awsui-button>
+                    </awsui-expandable-section>
+                </div>
+                <div ng-switch-when="tab_apiaccess">
+                    <table class="grid">
+                        <thead>
+                            <th>Access Key</th>
+                            <th>Date Created</th>
+                            <th>Last Used</th>
+                            <th>Status</th>
+                            <th style="text-align:center;">Actions</th>
+                        </thead>
+                        <tbody ng-show="api_access.length > 0">
+                            <tr ng-repeat="key in api_access">
+                                <td>{{key.access_key_id}}</td>
+                                <td>{{key.created_at | date:'short'}}</td>
+                                <td>{{key.last_used | date:'short'}}</td>
+                                <td><span class="{{key.key_status == 'Active' ? 'awsui-status-positive' : 'awsui-status-negative'}}"><b>{{key.key_status}}</b></span></td>
+                                <td class="awsui-util-t-c">
+                                    <awsui-button ng-show="key.key_status == 'Active'" text="Make Inactive" variant="link" ng-click="inactivateKey($index)"></awsui-button>
+                                    <awsui-button ng-show="key.key_status != 'Active'" text="Make Active" variant="link" ng-click="activateKey($index)"></awsui-button> |
+                                    <awsui-button text="Delete" variant="link" ng-click="deleteKey($index)"></awsui-button>
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tbody ng-show="api_access.length == 0">
+                            <tr>
+                                <td colspan="5">
+                                    <label>No Access Keys for user.</label>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    <awsui-button data-disabled="!user.enabled" ng-show="api_access.length == 0" class="awsui-util-mt-m" variant="primary" text="Generate Access Key" ng-click="generateAccessKey()"></awsui-button>
+                </div>
+            </div>
+        </awsui-tabs>
+    </form>
+</section>
+<awsui-modal visible="showDeleteModal" header="Delete user">
+    <span dom-region="content">
+        <p>You are about to <b class="awsui-status-negative">delete</b> the user {{user.name}}, this will remove the user's access and account from the data lake. Do you want to proceed?</p>
+    </span>
+    <span dom-region="footer">
+        <awsui-button text="Delete" variant="danger" class="awsui-util-f-r" ng-click="deleteUser()"></awsui-button>
+        <awsui-button text="Cancel" variant="link" class="awsui-util-f-r" ng-click="closeDeleteModal()"></awsui-button>
+    </span>
+</awsui-modal>

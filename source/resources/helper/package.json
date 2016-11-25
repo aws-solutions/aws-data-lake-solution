@@ -1,0 +1,33 @@
+{
+    "name": "data-lake-helper",
+    "description": "Data Lake custom resource helper Lambda function",
+    "main": "index.js",
+    "author": {
+        "name": "aws-solutions-builder"
+    },
+    "version": "0.0.1",
+    "private": "true",
+    "dependencies": {
+        "elasticsearch": "*",
+        "http-aws-es": "*",
+        "aws-sdk": "*",
+        "moment": "*",
+        "underscore": "*",
+        "password-generator": "*",
+        "node-uuid": "*"
+    },
+    "devDependencies": {
+        "grunt": "^0.4.5",
+        "grunt-aws-lambda": "^0.13.0",
+        "grunt-pack": "0.1.*",
+        "grunt-contrib-clean": "*"
+    },
+    "bundledDependencies": [
+        "elasticsearch",
+        "http-aws-es",
+        "moment",
+        "underscore",
+        "password-generator",
+        "node-uuid"
+    ]
+}

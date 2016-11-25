@@ -1,0 +1,33 @@
+{
+    "name": "data-lake-authorizer",
+    "description": "A Lambda function for authorizing access to the Data Lake API",
+    "main": "index.js",
+    "author": {
+        "name": "aws-solutions-builder"
+    },
+    "version": "0.0.1",
+    "private": "true",
+    "dependencies": {
+        "aws-sdk": "*",
+        "moment": "*",
+        "jsonwebtoken": "*",
+        "jwk-to-pem": "*",
+        "request": "*",
+        "underscore": "*",
+        "js-base64": "*"
+    },
+    "devDependencies": {
+        "grunt": "^0.4.5",
+        "grunt-aws-lambda": "^0.13.0",
+        "grunt-pack": "0.1.*",
+        "grunt-contrib-clean": "*"
+    },
+    "bundledDependencies": [
+        "moment",
+        "jsonwebtoken",
+        "jwk-to-pem",
+        "request",
+        "underscore",
+        "js-base64"
+    ]
+}

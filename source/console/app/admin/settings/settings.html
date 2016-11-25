@@ -1,0 +1,95 @@
+<h1>Settings</h1>
+<p>Manage the general and governance settings for the data lake.</p>
+<section class="awsui-util-mt-l" ng-show="showerror">
+    <awsui-alert type="error">
+      <span dom-region="header">Service error</span>
+      <span dom-region="content">An unexpected error has occured while retrieving settings.</span>
+    </awsui-alert>
+</section>
+<div class="clearfix">
+    <awsui-button-group class="awsui-util-f-r">
+        <awsui-button icon="refresh" ng-click="refresh()"></awsui-button>
+        <awsui-button icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/admin-guide/working-with-settings"></awsui-button>
+    </awsui-button-group>
+</div>
+<awsui-tabs tabs="tabs" ng-model="currentTab">
+    <div ng-switch="currentTab">
+        <div ng-switch-when="tab_general">
+            <section>
+            <form ng-show="appconfig.setting" name="settingsForm" novalidate ng-submit="updateAppSettings(appconfig, settingsForm.$valid)">
+                <awsui-control-group class="full-width" validation-message="" label="Application Url">
+                    <a target="_blank" href='{{appconfig.setting.appUrl}}'>{{appconfig.setting.appUrl}}</a>
+                </awsui-control-group>
+                <awsui-control-group class="full-width" validation-message="" label="Default Amazon S3 Bucket">
+                    {{appconfig.setting.defaultS3Bucket}}
+                </awsui-control-group>
+                <awsui-control-group class="full-width" validation-message="" label="Amazon Elasticsearch Index">
+                    {{appconfig.setting.esindex}}
+                </awsui-control-group>
+                <awsui-control-group class="full-width" validation-message="" label="Amazon Elasticsearch Url">
+                    <a target="_blank" href='{{appconfig.setting.esurl}}'>{{appconfig.setting.esurl}}</a>
+                </awsui-control-group>
+                <awsui-control-group class="full-width" validation-message="" label="Amazon Elasticsearch Kibana Url">
+                    <a target="_blank" href='{{appconfig.setting.esurl}}/_plugin/kibana/'>{{appconfig.setting.esurl}}/_plugin/kibana/</a>
+                </awsui-control-group>
+                <awsui-control-group class="full-width" validation-message="" label="Cognito User Pool Id">
+                    {{appconfig.setting.idp}}
+                </awsui-control-group>
+                <awsui-control-group label="Audit Logging">
+                    <awsui-checkbox ng-model="appconfig.setting.auditLogging" label="Enable access logging"></awsui-checkbox>
+                </awsui-control-group>
+                <awsui-control-group instructional="Number of records to return for search results." validation-message="{{ settingsForm.resultsLimit.$touched && settingsForm.resultsLimit.$invalid ? 'The limit must be a valid integer!' : '' }}" label="Default Search Results Limit">
+                    <awsui-textfield name="resultsLimit" ng-model="appconfig.setting.searchResultsLimit" ng-pattern='/^\d+$/' required data-disabled="false" ></awsui-textfield>
+                </awsui-control-group>
+                <awsui-control-group instructional="Expiration timeframe in seconds. Minimum of 900 (15 min) and maximum of 14400 (4 hours)." validation-message="{{ settingsForm.expiration.$touched && settingsForm.expiration.$invalid ? 'The default expiration must be a valid integer!' : '' }}" label="Default Manifest Expiration Period">
+                    <awsui-textfield name="expiration" ng-model="appconfig.setting.cartAccessExpiration" ng-pattern='/^\d+$/' required data-disabled="false" ></awsui-textfield>
+                </awsui-control-group>
+                <h1></h1>
+                <awsui-control-group>
+                    <div class="text-right">
+                        <awsui-button variant="primary" type="submit" text="Save"></awsui-button>
+                    </div>
+                </awsui-control-group>
+            </form>
+            <div ng-show="!appconfig.setting">
+                <label>The Data Lake configuration settings are not available.</label>
+            </div>
+        </section>
+        </div>
+        <div ng-switch-when="tab_governance">
+            <section>
+                <h3>Required Metadata Tags</h3>
+                <p>Set and manage metadata tags that are required for each data lake package.</p>
+                <div class="center-text" ng-show="metadataGovernance.length == 0">
+                    <label>No metadata governance defined.</label>
+                </div>
+                <table ng-show="metadataGovernance.length > 0">
+                    <th>Tag Name</th>
+                    <th>Governance</th>
+                    <th></th>
+                    <tr ng-repeat="item in metadataGovernance" ng-show="item.setting._state != 'deleted'">
+                        <td>
+                            <awsui-textfield ng-model="item.setting.tag" data-disabled="false" ng-change='governanceChanged($index)'></awsui-textfield>
+                        </td>
+                        <td>
+                            <awsui-select name="governance" data-disabled="false" ng-model="item.setting.governance" required placeholder="Select a governance..." items="tag_governance" ng-change='governanceChanged($index)'></awsui-select>
+                        </td>
+                        <td width="20">
+                            <awsui-button icon="times" text="" variant="standalone-icon"
+                                          label="remove"
+                                          ng-click="removeMetadataGovernance($index)"></awsui-button>
+                        </td>
+                    </tr>
+                </table>
+                <awsui-button class="awsui-util-mt-s" icon="plus-circle" ng-click="addMetadataGovernance()" text="Add Tag Governance"
+                              variant="link">
+                </awsui-button>
+                <h1></h1>
+                <div class="text-right">
+                    <awsui-button text="Cancel" variant="link" ng-click="cancelGovernanceEdits()"></awsui-button>
+                    <awsui-button class="awsui-util-mt-s" variant="primary" text="Save" ng-click="saveGovernanceSettings()"></awsui-button>
+                </div>
+            </section>
+        </div>
+    </div>
+</awsui-tabs>

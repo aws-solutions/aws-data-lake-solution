@@ -1,0 +1,62 @@
+<div id="theme-gradient"></div>
+<main>
+    <div class="login-wrapper">
+        <form name="signinForm" novalidate ng-submit="signin(user, signinForm.$valid)">
+    		<div class="panel panel-bordered z-depth-1">
+    			<div class="panel-header">
+    				<h2 class="font-weight-200">
+    					Data<b class="main-text font-weight-200">Lake</b>
+    				</h2>
+    			</div>
+
+    			<div class="panel-body">
+                    <p class="text-muted text-center">Sign in to the Data Lake.</p>
+                    <div class="form-group" ng-show="errormessage">
+                        <div class="has-error">
+                            <p class="help-block text-cetner">{{errormessage}}</p>
+                        </div>
+                    </div>
+                    <div class="form-group " ng-class="{ 'has-error': signinForm.email.$touched && signinForm.email.$invalid }">
+                        <input name="email" class="form-control no-gutter" ng-model="user.email" required placeholder="Email" type="email">
+                        <div class="help-block" ng-messages="signinForm.email.$error" ng-if="signinForm.email.$touched">
+                            <p ng-message="required">This field is required</p>
+                            <p ng-message="email">This needs to be a valid email</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group " ng-class="{ 'has-error': signinForm.password.$touched && signinForm.password.$invalid }">
+                        <input name="password" class="form-control no-gutter" ng-model="user.password" required placeholder="Password" type="password">
+                        <div class="help-block" ng-messages="signinForm.password.$error" ng-if="signinForm.password.$touched">
+                            <p ng-message="required">This field is required</p>
+                        </div>
+                    </div>
+
+                    <div class="remember-forgot-wrapper no-gutter">
+						<p class="forgot-password text-right">
+							<a href="#/forgot">
+								<i class="material-icons">lock</i>
+								Forgot password
+							</a>
+						</p>
+					</div>
+
+    			</div>
+
+    			<div class="panel-footer">
+    				<div class="text-center">
+    					<button type="submit" class="btn btn-primary" style="min-width:100px;">
+    						Sign In
+    					</button>
+    				</div>
+    			</div>
+                <div class="panel-footer right-align">
+                    <div class="form-group">
+                        <div class="text-center">
+                            <p>{{ 'Version v%VERSION%.' | interpolate }}</p>
+                        </div>
+                    </div>
+                </div>
+    		</div>
+        </form>
+    </div>
+</main>
