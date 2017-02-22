@@ -1,0 +1,224 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "(SO0017) - The AWS CloudFormation template for deployment of the AWS Data Lake resources. Version 1"
+
+Parameters:
+    AdministratorName:
+        Type: String
+        Description: Name of the Data Lake administrator.
+    AdministratorEmail:
+        Type: String
+        Description: Email address for Data Lake administrator.
+        AllowedPattern: "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
+    AccessIpAddress:
+        Type: String
+        Description: IP address that can access the Amazon Elasticsearch Cluster
+        MinLength: 9
+        MaxLength: 18
+        AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+        ConstraintDescription: "must be a valid IP CIDR range of the form x.x.x.x/x."
+    SendAnonymousData:
+        Description: Anonymous Metrics Request
+        Type: String
+        Default: "Yes"
+        AllowedValues:
+            - "Yes"
+            - "No"
+
+Metadata:
+    AWS::CloudFormation::Interface:
+        ParameterGroups:
+            -
+                Label:
+                    default: "Administator Configuration"
+                Parameters:
+                    - AdministratorName
+                    - AdministratorEmail
+                    - AccessIpAddress
+            -
+                Label:
+                    default: "Anonymous Metrics Request"
+                Parameters:
+                    - SendAnonymousData
+        ParameterLabels:
+            AdministratorName:
+                default: "Administrator name"
+            AdministratorEmail:
+                default: "Administrator email address"
+            AccessIpAddress:
+                default: "Administrator Access IP for Elasticsearch cluster"
+            SendAnonymousData:
+                default: "Send Anonymous Usage Data"
+
+Mappings:
+    SourceCode:
+        General:
+            S3Bucket: "solutions"
+            KeyPrefix: "data-lake/latest"
+        Specific:
+            S3Bucket: "data-lake-cforms.ifood.com.br"
+            KeyPrefix: "cform-without-iam"
+
+Resources:
+    DataLakeServicesStack:
+        DependsOn: "DataLakeUserPool"
+        Type: "AWS::CloudFormation::Stack"
+        Properties:
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "Specific", "S3Bucket"], !FindInMap ["SourceCode", "Specific", "KeyPrefix"], "data-lake-services.yaml"]]
+            Parameters:
+                UserPoolId: !GetAtt DataLakeUserPool.UserPoolId
+                SourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+                SourceKeyPrefix: !FindInMap ["SourceCode", "General", "KeyPrefix"]
+
+    DataLakeStorageStack:
+        Type: "AWS::CloudFormation::Stack"
+        Properties:
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "Specific", "S3Bucket"], !FindInMap ["SourceCode", "Specific", "KeyPrefix"], "data-lake-storage.yaml"]]
+            Parameters:
+                ESAccessIpAddress: !Ref AccessIpAddress
+
+
+    DataLakeApiStack:
+        DependsOn: "DataLakeServicesStack"
+        Type: "AWS::CloudFormation::Stack"
+        Properties:
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "Specific", "S3Bucket"], !FindInMap ["SourceCode", "Specific", "KeyPrefix"], "data-lake-api.yaml"]]
+            Parameters:
+                AuthorizerArn: !GetAtt DataLakeServicesStack.Outputs.AuthorizerArn
+                AdminArn: !GetAtt DataLakeServicesStack.Outputs.AdminArn
+                CartArn: !GetAtt DataLakeServicesStack.Outputs.CartArn
+                ProfileArn: !GetAtt DataLakeServicesStack.Outputs.ProfileArn
+                SearchArn: !GetAtt DataLakeServicesStack.Outputs.SearchArn
+                PackageArn: !GetAtt DataLakeServicesStack.Outputs.PackageArn
+
+    DataLakeUserPool:
+        Type: "Custom::LoadLambda"
+        Properties:
+            ServiceToken:
+                Fn::GetAtt:
+                    - "DataLakeHelper"
+                    - "Arn"
+            Region:
+                - Ref: "AWS::Region"
+            appUrl: !Join ["", ["http://", "datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", ".s3-website-", Ref: "AWS::Region", ".amazonaws.com"]]
+            adminName: !Ref AdministratorName
+            adminEmail: !Ref AdministratorEmail
+            customAction: "createUserPool"
+
+    DataLakeAppConfig:
+        Type: "Custom::LoadLambda"
+        Properties:
+            ServiceToken:
+                Fn::GetAtt:
+                    - "DataLakeHelper"
+                    - "Arn"
+            Region:
+                - Ref: "AWS::Region"
+            defaultS3Bucket: !Join ["", ["data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId" ]]
+            appUrl: !GetAtt DataLakeStorageStack.Outputs.WebsiteURL
+            idp: !GetAtt DataLakeUserPool.UserPoolId
+            auditLogging: false
+            cartAccessExpiration: 14400
+            searchResultsLimit: 100
+            apiEndpoint: !Join ["", ["https://", !GetAtt DataLakeApiStack.Outputs.ApiId, ".execute-api.", Ref: "AWS::Region", ".amazonaws.com/prod" ]]
+            esindex: "data-lake"
+            esurl: !Join ["", ["https://", !GetAtt DataLakeStorageStack.Outputs.EsCluster ]]
+            kmsKeyId: !Join ["", ["alias/datalake-", Ref: "AWS::Region" ]]
+            anonymousData: !Ref SendAnonymousData
+            UUID: !GetAtt DataLakeUuid.UUID
+            customAction: "loadAppConfig"
+
+    DataLakeWebsite:
+        DependsOn: "DataLakeApiStack"
+        Type: "Custom::LoadLambda"
+        Properties:
+            ServiceToken:
+                Fn::GetAtt:
+                    - "DataLakeHelper"
+                    - "Arn"
+            Region:
+                - Ref: "AWS::Region"
+            sourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+            sourceS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "site"]]
+            destS3Bucket: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId" ]]
+            userPoolId: !GetAtt DataLakeUserPool.UserPoolId
+            userPoolClientId: !GetAtt DataLakeUserPool.UserPoolClientId
+            apigEndpoint: !Join ["", ["https://", !GetAtt DataLakeApiStack.Outputs.ApiId, ".execute-api.", Ref: "AWS::Region", ".amazonaws.com/prod" ]]
+            appVersion: "0.9.0"
+            customAction: "configureWebsite"
+
+    DataLakeSearchIndex:
+        Type: "Custom::LoadLambda"
+        Properties:
+            ServiceToken:
+                Fn::GetAtt:
+                    - "DataLakeHelper"
+                    - "Arn"
+            Region:
+                - Ref: "AWS::Region"
+            clusterUrl: !Join ["", ["https://", !GetAtt DataLakeStorageStack.Outputs.EsCluster ]]
+            searchIndex: "data-lake"
+            customAction: "createSearchIndex"
+
+    DataLakeUuid:
+        Type: "Custom::LoadLambda"
+        Properties:
+            ServiceToken:
+                Fn::GetAtt:
+                    - "DataLakeHelper"
+                    - "Arn"
+            Region:
+                - Ref: "AWS::Region"
+            customAction: "createUuid"
+
+    DataLakeAnonymousMetric:
+        Type: "Custom::LoadLambda"
+        Properties:
+            ServiceToken:
+                Fn::GetAtt:
+                    - "DataLakeHelper"
+                    - "Arn"
+            Region:
+                - Ref: "AWS::Region"
+            solutionId: "SO0017"
+            UUID: !GetAtt DataLakeUuid.UUID
+            version: "1"
+            anonymousData: !Ref SendAnonymousData
+            customAction: "sendMetric"
+
+    DataLakeHelper:
+        Type: "AWS::Lambda::Function"
+        DependsOn: DataLakeStorageStack
+        Properties:
+            Code:
+                S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+                S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "data-lake-helper.zip"]]
+            Description: "A data lake helper function for solution deployment"
+            FunctionName: "data-lake-helper"
+            Handler: "index.handler"
+            MemorySize: "256"
+            Role: !Join ["", ['arn:aws:iam::', Ref: "AWS::AccountId", ':role/data-lake-helper-role-', Ref: "AWS::Region"]]
+            Runtime: "nodejs4.3"
+            Timeout: "300"
+
+    DataLakeDeployment:
+        DependsOn: "DataLakeApiStack"
+        Type: "AWS::ApiGateway::Deployment"
+        Properties:
+            RestApiId: !GetAtt DataLakeApiStack.Outputs.ApiId
+            Description: "Production"
+            StageName: "prod"
+
+Outputs:
+    ConsoleUrl:
+        Description: "URL for the data lake console"
+        Value: !GetAtt DataLakeStorageStack.Outputs.WebsiteURL
+    UserPoolId:
+        Description: "Id of data lake Amazon Cognito User Pool"
+        Value: !GetAtt DataLakeUserPool.UserPoolId
+    UserPoolClientId:
+        Description: "Id of data lake UI client app"
+        Value: !GetAtt DataLakeUserPool.UserPoolClientId
+    UUID:
+        Description: "UUID for data lake deployment"
+        Value: !GetAtt DataLakeUuid.UUID

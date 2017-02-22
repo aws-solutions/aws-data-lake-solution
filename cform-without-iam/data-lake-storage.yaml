@@ -1,0 +1,250 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "The AWS CloudFormation template for deployment of the AWS Data Lake storage resources"
+
+Parameters:
+    ESAccessIpAddress:
+        Type: String
+        Description: IP address that can access the Amazon Elasticsearch Cluster
+        MinLength: 9
+        MaxLength: 18
+        # AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
+        # ConstraintDescription: "must be a valid IP CIDR range of the form x.x.x.x/x."
+
+Mappings:
+    RegionMap:
+        us-east-1:
+            "InstanceType": "m3.large.elasticsearch"
+            "DedicatedMasterType": "t2.small.elasticsearch"
+        us-west-2:
+            "InstanceType": "m3.large.elasticsearch"
+            "DedicatedMasterType": "t2.small.elasticsearch"
+        eu-west-1:
+            "InstanceType": "m3.large.elasticsearch"
+            "DedicatedMasterType": "t2.small.elasticsearch"
+        eu-central-1:
+            "InstanceType": "m3.large.elasticsearch"
+            "DedicatedMasterType": "t2.small.elasticsearch"
+        ap-northeast-1:
+            "InstanceType": "m3.large.elasticsearch"
+            "DedicatedMasterType": "t2.small.elasticsearch"
+
+Resources:
+
+    DataLakeSettingsDynamo:
+        Type: "AWS::DynamoDB::Table"
+        DeletionPolicy: "Delete"
+        Properties:
+            AttributeDefinitions:
+                -
+                    AttributeName: "setting_id"
+                    AttributeType: "S"
+            KeySchema:
+                -
+                    AttributeName: "setting_id"
+                    KeyType: "HASH"
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 5
+            TableName: "data-lake-settings"
+
+    DataLakePackagesDynamo:
+        Type: "AWS::DynamoDB::Table"
+        DeletionPolicy: "Delete"
+        Properties:
+            AttributeDefinitions:
+                -
+                    AttributeName: "package_id"
+                    AttributeType: "S"
+            KeySchema:
+                -
+                    AttributeName: "package_id"
+                    KeyType: "HASH"
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 5
+            TableName: "data-lake-packages"
+
+    DataLakeMetadataDynamo:
+        Type: "AWS::DynamoDB::Table"
+        DeletionPolicy: "Delete"
+        Properties:
+            AttributeDefinitions:
+                -
+                    AttributeName: "package_id"
+                    AttributeType: "S"
+                -
+                    AttributeName: "metadata_id"
+                    AttributeType: "S"
+            KeySchema:
+                -
+                    AttributeName: "package_id"
+                    KeyType: "HASH"
+                -
+                    AttributeName: "metadata_id"
+                    KeyType: "RANGE"
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 5
+            TableName: "data-lake-metadata"
+
+    DataLakeKeysDynamo:
+        Type: "AWS::DynamoDB::Table"
+        DeletionPolicy: "Delete"
+        Properties:
+            AttributeDefinitions:
+                -
+                    AttributeName: "access_key_id"
+                    AttributeType: "S"
+                -
+                    AttributeName: "user_id"
+                    AttributeType: "S"
+            KeySchema:
+                -
+                    AttributeName: "access_key_id"
+                    KeyType: "HASH"
+                -
+                    AttributeName: "user_id"
+                    KeyType: "RANGE"
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 5
+            TableName: "data-lake-keys"
+
+    DataLakeDatasetsDynamo:
+        Type: "AWS::DynamoDB::Table"
+        DeletionPolicy: "Delete"
+        Properties:
+            AttributeDefinitions:
+                -
+                    AttributeName: "package_id"
+                    AttributeType: "S"
+                -
+                    AttributeName: "dataset_id"
+                    AttributeType: "S"
+            KeySchema:
+                -
+                    AttributeName: "package_id"
+                    KeyType: "HASH"
+                -
+                    AttributeName: "dataset_id"
+                    KeyType: "RANGE"
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 5
+            TableName: "data-lake-datasets"
+
+    DataLakeCartDynamo:
+        Type: "AWS::DynamoDB::Table"
+        DeletionPolicy: "Delete"
+        Properties:
+            AttributeDefinitions:
+                -
+                    AttributeName: "user_id"
+                    AttributeType: "S"
+                -
+                    AttributeName: "item_id"
+                    AttributeType: "S"
+            KeySchema:
+                -
+                    AttributeName: "user_id"
+                    KeyType: "HASH"
+                -
+                    AttributeName: "item_id"
+                    KeyType: "RANGE"
+            ProvisionedThroughput:
+                ReadCapacityUnits: 5
+                WriteCapacityUnits: 5
+            TableName: "data-lake-cart"
+
+    DataLakeDefaultBucket:
+        Type: AWS::S3::Bucket
+        DeletionPolicy: Retain
+        Properties:
+            BucketName: !Join ["", ["data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+            CorsConfiguration:
+                CorsRules:
+                -
+                    AllowedOrigins:
+                        - "*"
+                    AllowedMethods:
+                        - "HEAD"
+                        - "GET"
+                        - "PUT"
+                        - "POST"
+                    AllowedHeaders:
+                        - "*"
+
+    DataLakeWebsiteBucket:
+        DependsOn: DataLakeElasticsearchCluster
+        Type: AWS::S3::Bucket
+        DeletionPolicy: Retain
+        Properties:
+            BucketName: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+            WebsiteConfiguration:
+                IndexDocument: "index.html"
+
+    DataLakeWebsiteBucketPolicy:
+        Type: "AWS::S3::BucketPolicy"
+        Properties:
+            Bucket:
+                Ref: "DataLakeWebsiteBucket"
+            PolicyDocument:
+                Statement:
+                    -
+                        Action:
+                            - "s3:GetObject"
+                        Effect: "Allow"
+                        Resource:
+                            Fn::Join:
+                                - ""
+                                -
+                                    - "arn:aws:s3:::"
+                                    -
+                                        Ref: "DataLakeWebsiteBucket"
+                                    - "/*"
+                        Principal: "*"
+
+    DataLakeElasticsearchCluster:
+        Type: "AWS::Elasticsearch::Domain"
+        Properties:
+            DomainName: "data-lake"
+            ElasticsearchVersion: "2.3"
+            ElasticsearchClusterConfig:
+                DedicatedMasterEnabled: true
+                InstanceCount: 2
+                ZoneAwarenessEnabled: true
+                InstanceType: !FindInMap ["RegionMap", Ref: "AWS::Region", "InstanceType"]
+                DedicatedMasterType: !FindInMap ["RegionMap", Ref: "AWS::Region", "DedicatedMasterType"]
+                DedicatedMasterCount: 3
+            EBSOptions:
+                EBSEnabled: true
+                Iops: 0
+                VolumeSize: 50
+                VolumeType: "gp2"
+            SnapshotOptions:
+                AutomatedSnapshotStartHour: 1
+            AccessPolicies:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            AWS: "*"
+                        Action:
+                                - "es:*"
+                        Resource:
+                            !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/data-lake/*"]]
+                        Condition:
+                            IpAddress:
+                                aws:SourceIp: !Ref ESAccessIpAddress
+            AdvancedOptions:
+                rest.action.multi.allow_explicit_index: true
+
+Outputs:
+    EsCluster:
+        Description: "Elasticsearch cluster domain endpoint"
+        Value: !GetAtt DataLakeElasticsearchCluster.DomainEndpoint
+    WebsiteURL:
+        Description: "S3 Bucket static hosted website url"
+        Value: !GetAtt DataLakeWebsiteBucket.WebsiteURL
