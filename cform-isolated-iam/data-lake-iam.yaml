@@ -178,7 +178,7 @@ Resources:
                         Action:
                             - "*"
                         Resource:
-                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/data-lake*"]]
+                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/*"]]
                     -
                         Effect: "Allow"
                         Action:
@@ -536,7 +536,7 @@ Resources:
                         Action:
                             - "*"
                         Resource:
-                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/data-lake*"]]
+                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/*"]]
                     -
                         Effect: "Allow"
                         Action:
@@ -589,7 +589,7 @@ Resources:
                         Action:
                             - "*"
                         Resource:
-                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/data-lake*"]]
+                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/*"]]
                     -
                         Effect: "Allow"
                         Action:
