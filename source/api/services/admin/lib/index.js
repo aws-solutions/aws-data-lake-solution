@@ -51,8 +51,19 @@ module.exports.respond = function(event, cb) {
             cb(null, ticket);
         });
     } else {
+
+        // 2017-02-18: hotfix to accomodate API Gateway header transformations
+        let _authToken = '';
+        if (event.headers.Auth) {
+            console.log(['Header token post transformation:', 'Auth'].join(' '));
+            _authToken = event.headers.Auth;
+        } else if (event.headers.auth) {
+            console.log(['Header token post transformation:', 'auth'].join(' '));
+            _authToken = event.headers.auth;
+        }
+
         let _authPayload = {
-            authorizationToken: event.headers.Auth
+            authorizationToken: _authToken
         };
 
         _auth.authorizeRequest(_authPayload, ['Admin'], function(err, ticket) {

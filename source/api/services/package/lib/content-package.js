@@ -162,12 +162,22 @@ let contentPackage = (function() {
                         return cb(err, null);
                     }
 
+                    // 2017-02-18: hotfix to accomodate API Gateway header transformations
+                    let _authToken = '';
+                    if (event.headers.Auth) {
+                        console.log(['Header token post transformation:', 'Auth'].join(' '));
+                        _authToken = event.headers.Auth;
+                    } else if (event.headers.auth) {
+                        console.log(['Header token post transformation:', 'auth'].join(' '));
+                        _authToken = event.headers.auth;
+                    }
+
                     // if metadata exists, create the records
                     if (_body.metadata) {
                         let _metadata = new Metadata();
                         var _payload = {
                             headers: {
-                                Auth: event.headers.Auth
+                                Auth: _authToken
                             },
                             body: JSON.stringify({
                                 metadata: _body.metadata,
@@ -175,7 +185,7 @@ let contentPackage = (function() {
                             })
                         };
                         _metadata.createPackageMetadata(_newpackage.package_id, _payload.body,
-                            event.headers.Auth, ticket,
+                            _authToken, ticket,
                             function(err, data) {
                                 if (err) {
                                     console.log(err);
@@ -186,7 +196,7 @@ let contentPackage = (function() {
                             });
                     } else {
                         let _indexer = new Indexer();
-                        _indexer.indexToSearch(_newpackage.package_id, event.headers.Auth,
+                        _indexer.indexToSearch(_newpackage.package_id, _authToken,
                             function(err,
                                 data) {
                                 if (err) {
@@ -256,8 +266,19 @@ let contentPackage = (function() {
                         }
 
                         let _indexer = new Indexer();
-                        _indexer.deleteIndexedPackage(event.pathParameters.package_id, event.headers
-                            .Auth,
+
+                        // 2017-02-18: hotfix to accomodate API Gateway header transformations
+                        let _authToken = '';
+                        if (event.headers.Auth) {
+                            console.log(['Header token post transformation:', 'Auth'].join(' '));
+                            _authToken = event.headers.Auth;
+                        } else if (event.headers.auth) {
+                            console.log(['Header token post transformation:', 'auth'].join(' '));
+                            _authToken = event.headers.auth;
+                        }
+
+                        _indexer.deleteIndexedPackage(event.pathParameters.package_id,
+                            _authToken,
                             function(
                                 err, data) {
                                 if (err) {
@@ -369,7 +390,18 @@ let contentPackage = (function() {
                         }
 
                         let _indexer = new Indexer();
-                        _indexer.indexToSearch(event.pathParameters.package_id, event.headers.Auth,
+
+                        // 2017-02-18: hotfix to accomodate API Gateway header transformations
+                        let _authToken = '';
+                        if (event.headers.Auth) {
+                            console.log(['Header token post transformation:', 'Auth'].join(' '));
+                            _authToken = event.headers.Auth;
+                        } else if (event.headers.auth) {
+                            console.log(['Header token post transformation:', 'auth'].join(' '));
+                            _authToken = event.headers.auth;
+                        }
+
+                        _indexer.indexToSearch(event.pathParameters.package_id, _authToken,
                             function(err,
                                 data) {
                                 if (err) {

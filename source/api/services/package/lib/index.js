@@ -35,9 +35,20 @@ const servicename = 'data-lake-package-service';
  * @param {respond~requestCallback} cb - The callback that handles the response.
  */
 module.exports.respond = function(event, cb) {
+
+    // 2017-02-18: hotfix to accomodate API Gateway header transformations
+    let _authToken = '';
+    if (event.headers.Auth) {
+        console.log(['Header token post transformation:', 'Auth'].join(' '));
+        _authToken = event.headers.Auth;
+    } else if (event.headers.auth) {
+        console.log(['Header token post transformation:', 'auth'].join(' '));
+        _authToken = event.headers.auth;
+    }
+
     let _authCheckPayload = {
         authcheck: ['Admin', 'Member'],
-        authorizationToken: event.headers.Auth
+        authorizationToken: _authToken
     };
 
     let _response = '';
@@ -285,8 +296,19 @@ function processRequest(event, ticket, cb) {
         _operation = ['processing import manifest', event.pathParameters.dataset_id, 'for package',
             event.pathParameters.package_id
         ].join(' ');
+
+        // 2017-02-18: hotfix to accomodate API Gateway header transformations
+        let _authToken = '';
+        if (event.headers.Auth) {
+            console.log(['Header token post transformation:', 'Auth'].join(' '));
+            _authToken = event.headers.Auth;
+        } else if (event.headers.auth) {
+            console.log(['Header token post transformation:', 'auth'].join(' '));
+            _authToken = event.headers.auth;
+        }
+
         _dataset.processPackageDatasetManifest(event.pathParameters.package_id, event.pathParameters.dataset_id,
-            event.headers.Auth,
+            _authToken,
             function(err, data) {
                 if (err) {
                     console.log(err);
@@ -350,7 +372,18 @@ function processRequest(event, ticket, cb) {
             });
     } else if (event.resource === '/packages/{package_id}/metadata/{metadata_id}' && event.httpMethod === 'POST') {
         _operation = ['creating metadata for package', event.pathParameters.package_id].join(' ');
-        _metadata.createPackageMetadata(event.pathParameters.package_id, event.body, event.headers.Auth, ticket,
+
+        // 2017-02-18: hotfix to accomodate API Gateway header transformations
+        let _authToken = '';
+        if (event.headers.Auth) {
+            console.log(['Header token post transformation:', 'Auth'].join(' '));
+            _authToken = event.headers.Auth;
+        } else if (event.headers.auth) {
+            console.log(['Header token post transformation:', 'auth'].join(' '));
+            _authToken = event.headers.auth;
+        }
+
+        _metadata.createPackageMetadata(event.pathParameters.package_id, event.body, _authToken, ticket,
             function(err, data) {
                 if (err) {
                     console.log(err);

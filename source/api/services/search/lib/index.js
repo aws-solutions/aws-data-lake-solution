@@ -34,9 +34,19 @@ const servicename = 'data-lake-search-service';
  */
 module.exports.respond = function(event, cb) {
 
+    // 2017-02-18: hotfix to accomodate API Gateway header transformations
+    let _authToken = '';
+    if (event.headers.Auth) {
+        console.log(['Header token post transformation:', 'Auth'].join(' '));
+        _authToken = event.headers.Auth;
+    } else if (event.headers.auth) {
+        console.log(['Header token post transformation:', 'auth'].join(' '));
+        _authToken = event.headers.auth;
+    }
+
     let _authCheckPayload = {
         authcheck: ['Admin', 'Member'],
-        authorizationToken: event.headers.Auth
+        authorizationToken: _authToken
     };
 
     let _response = '';

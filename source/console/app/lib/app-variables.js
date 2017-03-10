@@ -17,7 +17,7 @@
 
 'use strict';
 
-var YOUR_USER_POOL_ID = 'us-east-1_yfXuoLUPp';
-var YOUR_USER_POOL_CLIENT_ID = '6ea7hehob5kshvfip34ag4711t';
+var YOUR_USER_POOL_ID = '';
+var YOUR_USER_POOL_CLIENT_ID = '';
 var APP_VERSION = '0.9.0';
-var APIG_ENDPOINT = 'https://l61yffbqvh.execute-api.us-east-1.amazonaws.com/prod';
+var APIG_ENDPOINT = '';

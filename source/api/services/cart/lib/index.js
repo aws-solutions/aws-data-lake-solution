@@ -33,9 +33,19 @@ const servicename = 'data-lake-cart-service';
  */
 module.exports.respond = function(event, cb) {
 
+    // 2017-02-18: hotfix to accomodate API Gateway header transformations
+    let _authToken = '';
+    if (event.headers.Auth) {
+        console.log(['Header token post transformation:', 'Auth'].join(' '));
+        _authToken = event.headers.Auth;
+    } else if (event.headers.auth) {
+        console.log(['Header token post transformation:', 'auth'].join(' '));
+        _authToken = event.headers.auth;
+    }
+
     let _authCheckPayload = {
         authcheck: ['Admin', 'Member'],
-        authorizationToken: event.headers.Auth
+        authorizationToken: _authToken
     };
 
     let _response = '';
@@ -175,7 +185,18 @@ function processRequest(event, ticket, cb) {
         });
     } else if (event.resource === '/cart' && event.httpMethod === 'POST') {
         _operation = 'checking out user\'s cart';
-        _cart.checkout(_body, ticket, event.headers.Auth, function(err, data) {
+
+        // 2017-02-18: hotfix to accomodate API Gateway header transformations
+        let _authToken = '';
+        if (event.headers.Auth) {
+            console.log(['Header token post transformation:', 'Auth'].join(' '));
+            _authToken = event.headers.Auth;
+        } else if (event.headers.auth) {
+            console.log(['Header token post transformation:', 'auth'].join(' '));
+            _authToken = event.headers.auth;
+        }
+
+        _cart.checkout(_body, ticket, _authToken, function(err, data) {
             if (err) {
                 console.log(err);
                 _response = buildOutput(500, err);
