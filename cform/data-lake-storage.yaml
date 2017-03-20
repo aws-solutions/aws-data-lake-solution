@@ -14,7 +14,10 @@ Parameters:
 Mappings:
     RegionMap:
         us-east-1:
-            "InstanceType": "m3.large.elasticsearch"
+            "InstanceType": "m4.large.elasticsearch"
+            "DedicatedMasterType": "t2.small.elasticsearch"
+        us-east-2:
+            "InstanceType": "m4.large.elasticsearch"
             "DedicatedMasterType": "t2.small.elasticsearch"
         us-west-2:
             "InstanceType": "m3.large.elasticsearch"
@@ -23,10 +26,16 @@ Mappings:
             "InstanceType": "m3.large.elasticsearch"
             "DedicatedMasterType": "t2.small.elasticsearch"
         eu-central-1:
-            "InstanceType": "m3.large.elasticsearch"
+            "InstanceType": "m4.large.elasticsearch"
             "DedicatedMasterType": "t2.small.elasticsearch"
         ap-northeast-1:
-            "InstanceType": "m3.large.elasticsearch"
+            "InstanceType": "m4.large.elasticsearch"
+            "DedicatedMasterType": "t2.small.elasticsearch"
+        ap-northeast-2:
+            "InstanceType": "m4.large.elasticsearch"
+            "DedicatedMasterType": "t2.small.elasticsearch"
+        ap-southeast-2:
+            "InstanceType": "m4.large.elasticsearch"
             "DedicatedMasterType": "t2.small.elasticsearch"
 
 Resources:
@@ -209,7 +218,7 @@ Resources:
         Type: "AWS::Elasticsearch::Domain"
         Properties:
             DomainName: "data-lake"
-            ElasticsearchVersion: "2.3"
+            ElasticsearchVersion: "5.1"
             ElasticsearchClusterConfig:
                 DedicatedMasterEnabled: true
                 InstanceCount: 2
