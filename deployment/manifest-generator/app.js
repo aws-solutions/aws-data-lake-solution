@@ -17,56 +17,54 @@
 
 'use strict';
 
-let AWS = require('aws-sdk');
+const fs = require('fs');
+const path = require('path');
 
-let manifest = require('./manifest.js');
+let getFileList = function(path) {
+    let fileInfo;
+    let filesFound;
+    let fileList = [];
 
-module.exports.respond = function(event, cb) {
-
-    let _authCheckPayload = {
-        authcheck: ['Admin', 'Member'],
-        authorizationToken: event.authorizationToken
-    };
-
-    let _response = '';
-
-    // invoke data-lake-admin-service function to verify if user has
-    // proper role for requested action
-    let params = {
-        FunctionName: 'data-lake-admin-service',
-        InvocationType: 'RequestResponse',
-        LogType: 'None',
-        Payload: JSON.stringify(_authCheckPayload)
-    };
-    let lambda = new AWS.Lambda();
-    lambda.invoke(params, function(err, data) {
-        if (err) {
-            console.log(err);
-            return cb(err, null);
+    filesFound = fs.readdirSync(path);
+    for (let i = 0; i < filesFound.length; i++) {
+        fileInfo = fs.lstatSync([path, filesFound[i]].join('/'));
+        if (fileInfo.isFile()) {
+            fileList.push(filesFound[i]);
         }
 
-        let _ticket = JSON.parse(data.Payload);
-        console.log('Authorization check result: ' + _ticket.auth_status);
-        if (_ticket.auth_status === 'authorized') {
+        if (fileInfo.isDirectory()) {
+            console.log([path, filesFound[i]].join('/'));
+        }
+    }
 
-            let _manifest = new manifest();
+    return fileList;
+};
 
-            if (event.operation === 'import') {
-                _manifest.import(event, cb);
-            } else if (event.operation === 'generate') {
-                _manifest.generate(event, cb);
-            } else {
-                return cb('Invalid operation request to manifest service.', null);
-            }
-
+// List all files in a directory in Node.js recursively in a synchronous fashion
+let walkSync = function(dir, filelist) {
+    // let filelist = []; //getFileList('./temp/site');
+    let files = fs.readdirSync(dir);
+    filelist = filelist || [];
+    files.forEach(function(file) {
+        if (fs.statSync(path.join(dir, file)).isDirectory()) {
+            filelist = walkSync(path.join(dir, file), filelist);
         } else {
-            return cb({
-                error: {
-                    message: 'User is not authorized to perform the requested action.'
-                }
-            }, null);
+            filelist.push(path.join(dir, file));
         }
-
     });
 
-}
+    return filelist;
+};
+
+let _filelist = [];
+let _manifest = {
+    files: []
+};
+walkSync('../dist/site', _filelist);
+
+for (let i = 0; i < _filelist.length; i++) {
+    _manifest.files.push(_filelist[i].replace('../dist/site/', ''));
+};
+
+console.log(_manifest);
+fs.writeFile('../dist/data-lake-site-manifest.json', JSON.stringify(_manifest, null, 4));

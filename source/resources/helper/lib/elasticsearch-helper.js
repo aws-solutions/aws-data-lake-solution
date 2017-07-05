@@ -21,6 +21,9 @@ let moment = require('moment');
 let AWS = require('aws-sdk');
 
 let creds = new AWS.EnvironmentCredentials('AWS'); // Lambda provided credentials
+AWS.config.update({
+    region: process.env.AWS_REGION
+});
 
 /**
  * Helper function to interact with the data lake Elasticsearch Service cluster for data lake cfn custom resource.
@@ -45,11 +48,7 @@ let elasticsearchHelper = (function() {
 
         let client = require('elasticsearch').Client({
             hosts: clusterUrl,
-            connectionClass: require('http-aws-es'),
-            amazonES: {
-                region: process.env.AWS_REGION,
-                credentials: creds
-            }
+            connectionClass: require('http-aws-es')
         });
 
         client.indices.create({

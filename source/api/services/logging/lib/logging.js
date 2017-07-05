@@ -10,10 +10,7 @@ const dynamoConfig = {
     credentials: creds,
     region: process.env.AWS_REGION
 };
-const docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
-const cloudwatchlogs = new AWS.CloudWatchLogs({
-    region: process.env.AWS_REGION
-});
+
 const ddbTable = 'data-lake-settings';
 const logName = '/datalake/audit-log';
 
@@ -45,6 +42,10 @@ let logging = (function() {
         let params = {
             logGroupName: logName
         };
+
+        const cloudwatchlogs = new AWS.CloudWatchLogs({
+            region: process.env.AWS_REGION
+        });
         cloudwatchlogs.createLogGroup(params, function(err, data) {
             if (err) {
                 console.log(err, err.stack); // an error occurred
@@ -61,6 +62,10 @@ let logging = (function() {
             logGroupName: logName,
             logStreamName: moment.utc().format('YYYY/MM/DD/[access]')
         };
+
+        const cloudwatchlogs = new AWS.CloudWatchLogs({
+            region: process.env.AWS_REGION
+        });
         cloudwatchlogs.createLogStream(params, function(err, data) {
             if (err) {
                 console.log(err, err.stack);
@@ -95,6 +100,9 @@ let logging = (function() {
         console.log(params)
             // return;
 
+        const cloudwatchlogs = new AWS.CloudWatchLogs({
+            region: process.env.AWS_REGION
+        });
         cloudwatchlogs.putLogEvents(params, function(err, data) {
             if (err) {
                 console.log(err, err.stack);
@@ -137,7 +145,7 @@ let logging = (function() {
                 } else {
                     return cb(null, {
                         error: {
-                            message: 'Unable to create create the log entry.'
+                            message: 'Unable to create the log entry.'
                         }
                     });
                 }
@@ -161,6 +169,7 @@ let logging = (function() {
             }
         };
 
+        const docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
         docClient.get(params, function(err, config) {
             if (err) {
                 console.log(err);
@@ -189,6 +198,7 @@ let logging = (function() {
             Item: _setting
         };
 
+        const docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
         docClient.put(params, function(err, data) {
             if (err) {
                 console.log(err);

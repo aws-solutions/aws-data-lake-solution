@@ -97,7 +97,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeLoggingRole"
                     - "Arn"
-            Runtime: "nodejs4.3"
+            Runtime: "nodejs6.10"
             Timeout: "60"
 
     DataLakeAdminRole:
@@ -190,7 +190,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeAdminRole"
                     - "Arn"
-            Runtime: "nodejs4.3"
+            Runtime: "nodejs6.10"
             Timeout: "60"
 
     DataLakeSearchRole:
@@ -272,7 +272,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeSearchRole"
                     - "Arn"
-            Runtime: "nodejs4.3"
+            Runtime: "nodejs6.10"
             Timeout: "60"
 
     DataLakeManifestRole:
@@ -372,7 +372,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeManifestRole"
                     - "Arn"
-            Runtime: "nodejs4.3"
+            Runtime: "nodejs6.10"
             Timeout: "300"
 
     DataLakeCartRole:
@@ -456,7 +456,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeCartRole"
                     - "Arn"
-            Runtime: "nodejs4.3"
+            Runtime: "nodejs6.10"
             Timeout: "60"
 
     DataLakePackagesRole:
@@ -564,7 +564,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakePackagesRole"
                     - "Arn"
-            Runtime: "nodejs4.3"
+            Runtime: "nodejs6.10"
             Timeout: "300"
 
     DataLakeProfileRole:
@@ -655,7 +655,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeProfileRole"
                     - "Arn"
-            Runtime: "nodejs4.3"
+            Runtime: "nodejs6.10"
             Timeout: "300"
 
     DataLakeAuthorizerRole:
@@ -733,7 +733,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeAuthorizerRole"
                     - "Arn"
-            Runtime: "nodejs4.3"
+            Runtime: "nodejs6.10"
             Timeout: "60"
 
 Outputs:

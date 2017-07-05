@@ -26,7 +26,6 @@ const dynamoConfig = {
     credentials: creds,
     region: process.env.AWS_REGION
 };
-const docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
 const ddbTable = 'data-lake-settings';
 
 /**
@@ -261,6 +260,7 @@ let metadata = (function() {
             }
         };
 
+        let docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
         docClient.get(params, function(err, data) {
             if (err) {
                 console.log(err);

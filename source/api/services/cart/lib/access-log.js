@@ -25,7 +25,6 @@ const dynamoConfig = {
     credentials: creds,
     region: process.env.AWS_REGION
 };
-const docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
 
 /**
  * AccessLog receives a set of informaiton related to an access event in the microservice.
@@ -112,6 +111,7 @@ let AccessLog = (function() {
             }
         };
 
+        let docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
         docClient.get(params, function(err, config) {
             if (err) {
                 console.log(err);

@@ -8,6 +8,44 @@ For the full solution overview visit [Data Lake on AWS](https://aws.amazon.com/a
 
 For help when using the data lake solution, visit the [online help guide](http://docs.awssolutionsbuilder.com/data-lake/).
 
+## Getting Started
+
+#### Prerequisites
+* [AWS Command Line Interface](https://aws.amazon.com/cli/)
+* Node.js 6.x
+
+The data lake solution is developed with Node.js for the microservices that run in AWS Lambda and Angular 1.x for the console user interface. The latest version of the data lake solution has been tested with Node.js v6.10.
+
+#### Build the data lake solution
+Clone the aws-data-lake-solution GitHub repository:
+```
+git clone https://github.com/awslabs/aws-data-lake-solution.git
+```
+
+Run the data lake solution unit tests:
+```
+cd aws-data-lake-solution/deployment
+./run-unit-tests.sh
+```
+
+Build the data lake solution for deployment:
+* Run build script
+```
+cd aws-data-lake-solution/deployment
+export DEPLOY_BUCKET=<Amazon S3 bucket to store deployment assets>
+./build-s3-dist.sh
+```
+* Upload deployment assets to your Amazon S3 bucket:
+```
+aws s3 cp ./dist s3://$DEPLOY_BUCKET/data-lake/latest --recursive --acl bucket-owner-full-control
+```
+
+Deploy the data lake solution:
+* From your designated Amazon S3 bucket where you uploaded the deployment assets, copy the link location for the data-lake-deploy.template.
+* Using AWS CloudFormation, launch the data lake solution stack using the copied Amazon S3 link for the data-lake-deploy.template.
+
+> Currently, the data lake solution can be deployed in the following regions: [ us-east-1, us-east-2, us-west-2, eu-west-1, eu-west-2, eu-central-1, ap-northeast-1, ap-northeast-2, ap-southeast-2, ap-south-1 ]
+
 ## Cloudformation templates
 
 - cform/data-lake-deploy.yaml

@@ -364,7 +364,7 @@ let manifest = (function() {
 
     /**
      * Updates the status of an import manifest Amazon DynamoDB [data-lake-datasets] table
-     * oo 'processed' indicating the import is complete.
+     * or 'processed' indicating the import is complete.
      * @param {updateManifestDatasetStatus~requestCallback} cb - The callback that handles the response.
      */
     let updateManifestDatasetStatus = function(status, cb) {
