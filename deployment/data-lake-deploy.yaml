@@ -119,7 +119,7 @@ Resources:
             searchResultsLimit: 100
             apiEndpoint: !Join ["", ["https://", !GetAtt DataLakeApiStack.Outputs.ApiId, ".execute-api.", Ref: "AWS::Region", ".amazonaws.com/prod" ]]
             esindex: "data-lake"
-            esurl: !Join ["", ["https://", !GetAtt DataLakeStorageStack.Outputs.EsCluster, ":80" ]]
+            esurl: !Join ["", ["https://", !GetAtt DataLakeStorageStack.Outputs.EsCluster ]]
             kmsKeyId: !Join ["", ["alias/datalake-", Ref: "AWS::Region" ]]
             anonymousData: !Ref SendAnonymousData
             UUID: !GetAtt DataLakeUuid.UUID
@@ -154,7 +154,7 @@ Resources:
                     - "Arn"
             Region:
                 - Ref: "AWS::Region"
-            clusterUrl: !Join ["", ["https://", !GetAtt DataLakeStorageStack.Outputs.EsCluster, ":80" ]]
+            clusterUrl: !Join ["", ["https://", !GetAtt DataLakeStorageStack.Outputs.EsCluster ]]
             searchIndex: "data-lake"
             customAction: "createSearchIndex"
 

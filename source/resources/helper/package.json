@@ -9,7 +9,7 @@
     "private": "true",
     "dependencies": {
         "elasticsearch": "*",
-        "http-aws-es": "*",
+        "http-aws-es": "2.0.4",
         "aws-sdk": "*",
         "moment": "*",
         "underscore": "*",
