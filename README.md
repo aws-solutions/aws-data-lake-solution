@@ -53,6 +53,16 @@ Deploy the data lake solution:
 - cform/data-lake-services.yaml
 - cform/data-lake-api.yaml
 
+## Cloudformation templates (Isolated IAM)
+
+These templates are used when you need to deploy the IAM roles first as an administrator user, then use the others to deploy as a user that does not have privileges on IAM.
+
+- cform-isolated-iam/data-lake-iam.yaml (run as administrator)
+- cform-isolated-iam/data-lake-deploy.yaml
+- cform-isolated-iam/data-lake-storage.yaml
+- cform-isolated-iam/data-lake-services.yaml
+- cform-isolated-iam/data-lake-api.yaml
+
 ## Source
 
 - source/api/authorizer: custom data lake authorizer for API Gateway

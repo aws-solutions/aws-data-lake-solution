@@ -1,0 +1,615 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "The AWS CloudFormation template for IAM resources of a data lake (run as administrator)"
+
+Resources:
+    DataLakeHelperRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-helper-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakeHelperPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the deployment helper Lambda function."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            - !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/data-lake-helper:*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "dynamodb:PutItem"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-settings"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "cognito-idp:CreateUserPool"
+                            - "cognito-idp:AddCustomAttributes"
+                            - "cognito-idp:CreateUserPoolClient"
+                            - "cognito-idp:AdminCreateUser"
+                        Resource:
+                            - "*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "es:ESHttpPut"
+                        Resource:
+                            !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/data-lake/*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:GetObject"
+                        Resource:
+                            - "arn:aws:s3:::*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:PutObject"
+                        Resource:
+                            - !Join ["", ["arn:aws:s3:::datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", "/*" ]]
+
+            Roles:
+                -
+                    Ref: "DataLakeHelperRole"
+
+    DataLakeKmsKey:
+        Type: "AWS::KMS::Key"
+        Properties:
+            Description: "Data Lake KMS Key"
+            KeyPolicy:
+                Version: "2012-10-17"
+                Id: "data-lake-key-default-1"
+                Statement:
+                    -
+                        Sid: "Allow administration of the key"
+                        Effect: "Allow"
+                        Principal:
+                            AWS: !Join ["", ["arn:aws:iam::", Ref: "AWS::AccountId", ":root"]]
+                        Action:
+                            - "kms:*"
+                        Resource: "*"
+
+    DataLakeKmsKeyAlias:
+        Type: AWS::KMS::Alias
+        Properties:
+            AliasName: !Join ["", ["alias/datalake-", Ref: "AWS::Region" ]]
+            TargetKeyId:
+                Ref: DataLakeKmsKey
+
+    DataLakeLoggingRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-logging-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakeLoggingPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the logging microservice Lambda function."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            - !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/datalake/audit-log:*"]]
+                            - !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/data-lake-logging-service:*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "dynamodb:GetItem"
+                            - "dynamodb:PutItem"
+                            - "dynamodb:Query"
+                            - "dynamodb:Scan"
+                            - "dynamodb:UpdateItem"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-settings"]]
+            Roles:
+                -
+                    Ref: "DataLakeLoggingRole"
+
+    DataLakeAdminRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-admin-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakeAdminPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the admin microservice Lambda function."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/data-lake-admin-service:*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "*"
+                        Resource:
+                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "dynamodb:BatchGetItem"
+                            - "dynamodb:BatchWriteItem"
+                            - "dynamodb:DeleteItem"
+                            - "dynamodb:GetItem"
+                            - "dynamodb:PutItem"
+                            - "dynamodb:Query"
+                            - "dynamodb:Scan"
+                            - "dynamodb:UpdateItem"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-settings"]]
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-keys"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "lambda:InvokeFunction"
+                        Resource:
+                            - !Join ["", ["arn:aws:lambda:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":function:data-lake*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "kms:Encrypt"
+                            - "kms:Decrypt"
+                            - "kms:ReEncrypt*"
+                            - "kms:GenerateDataKey*"
+                            - "kms:DescribeKey"
+                        Resource:
+                            Fn::GetAtt:
+                                - "DataLakeKmsKey"
+                                - "Arn"
+            Roles:
+                -
+                    Ref: "DataLakeAdminRole"
+
+    DataLakeSearchRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-search-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakeSearchPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the search microservice Lambda function."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/data-lake-search-service:*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "es:ESHttpPost"
+                            - "es:ESHttpDelete"
+                            - "es:ESHttpPut"
+                            - "es:ESHttpGet"
+                        Resource:
+                            !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/data-lake/*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "dynamodb:GetItem"
+                            - "dynamodb:Query"
+                            - "dynamodb:Scan"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-settings"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "lambda:InvokeFunction"
+                        Resource:
+                            - !Join ["", ["arn:aws:lambda:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":function:data-lake*"]]
+            Roles:
+                -
+                    Ref: "DataLakeSearchRole"
+
+    DataLakeManifestRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-manifest-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakeManifestPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the manifest microservice Lambda function."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/data-lake-manifest-service:*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "dynamodb:BatchGetItem"
+                            - "dynamodb:BatchWriteItem"
+                            - "dynamodb:DeleteItem"
+                            - "dynamodb:GetItem"
+                            - "dynamodb:PutItem"
+                            - "dynamodb:Query"
+                            - "dynamodb:Scan"
+                            - "dynamodb:UpdateItem"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-settings"]]
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-cart"]]
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-datasets"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "lambda:InvokeFunction"
+                        Resource:
+                            - !Join ["", ["arn:aws:lambda:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":function:data-lake*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:GetObject"
+                        Resource:
+                            - "arn:aws:s3:::*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:PutObject"
+                        Resource:
+                            - !Join ["", ["arn:aws:s3:::data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", "/*" ]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "kms:Encrypt"
+                            - "kms:Decrypt"
+                            - "kms:ReEncrypt*"
+                            - "kms:GenerateDataKey*"
+                            - "kms:DescribeKey"
+                        Resource:
+                            Fn::GetAtt:
+                                - "DataLakeKmsKey"
+                                - "Arn"
+            Roles:
+                -
+                    Ref: "DataLakeManifestRole"
+
+    DataLakeCartRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-cart-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakeCartPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the cart microservice Lambda function."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/data-lake-cart-service:*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "dynamodb:BatchGetItem"
+                            - "dynamodb:BatchWriteItem"
+                            - "dynamodb:DeleteItem"
+                            - "dynamodb:GetItem"
+                            - "dynamodb:PutItem"
+                            - "dynamodb:Query"
+                            - "dynamodb:Scan"
+                            - "dynamodb:UpdateItem"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-settings"]]
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-cart"]]
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-packages"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "lambda:InvokeFunction"
+                        Resource:
+                            - !Join ["", ["arn:aws:lambda:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":function:data-lake*"]]
+
+            Roles:
+                -
+                    Ref: "DataLakeCartRole"
+
+    DataLakePackagesRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-packages-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakePackagesPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the package microservice Lambda function."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/data-lake-package-service:*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "dynamodb:BatchGetItem"
+                            - "dynamodb:BatchWriteItem"
+                            - "dynamodb:DeleteItem"
+                            - "dynamodb:GetItem"
+                            - "dynamodb:PutItem"
+                            - "dynamodb:Query"
+                            - "dynamodb:Scan"
+                            - "dynamodb:UpdateItem"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-packages"]]
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-datasets"]]
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-metadata"]]
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-settings"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "lambda:InvokeFunction"
+                        Resource:
+                            - !Join ["", ["arn:aws:lambda:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":function:data-lake*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:GetObject"
+                            - "s3:PutObject"
+                        Resource:
+                            - !Join ["", ["arn:aws:s3:::data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", "/*" ]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "kms:Encrypt"
+                            - "kms:Decrypt"
+                            - "kms:ReEncrypt*"
+                            - "kms:GenerateDataKey*"
+                            - "kms:DescribeKey"
+                        Resource:
+                            Fn::GetAtt:
+                                - "DataLakeKmsKey"
+                                - "Arn"
+            Roles:
+                -
+                    Ref: "DataLakePackagesRole"
+
+    DataLakeProfileRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-profile-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakeProfilePolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the profile microservice Lambda function."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/data-lake-profile-service:*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "dynamodb:GetItem"
+                            - "dynamodb:Query"
+                            - "dynamodb:Scan"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-settings"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "lambda:InvokeFunction"
+                        Resource:
+                            - !Join ["", ["arn:aws:lambda:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":function:data-lake*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "*"
+                        Resource:
+                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "kms:Encrypt"
+                            - "kms:Decrypt"
+                            - "kms:ReEncrypt*"
+                            - "kms:GenerateDataKey*"
+                            - "kms:DescribeKey"
+                        Resource:
+                            Fn::GetAtt:
+                                - "DataLakeKmsKey"
+                                - "Arn"
+            Roles:
+                -
+                    Ref: "DataLakeProfileRole"
+
+    DataLakeAuthorizerRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-authorizer-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "lambda.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakeAuthorizerPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the authorizer microservice Lambda function."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            !Join ["", ["arn:aws:logs:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":log-group:/aws/lambda/data-lake-authorizer:*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "*"
+                        Resource:
+                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/*"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "dynamodb:GetItem"
+                            - "dynamodb:Query"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-settings"]]
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-keys"]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "kms:Encrypt"
+                            - "kms:Decrypt"
+                            - "kms:ReEncrypt*"
+                            - "kms:GenerateDataKey*"
+                            - "kms:DescribeKey"
+                        Resource:
+                            Fn::GetAtt:
+                                - "DataLakeKmsKey"
+                                - "Arn"
+            Roles:
+                -
+                    Ref: "DataLakeAuthorizerRole"

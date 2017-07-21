@@ -1,0 +1,146 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: "The AWS CloudFormation template for deployment of the AWS Data Lake resources"
+
+Parameters:
+    UserPoolId:
+        Type: String
+        Description: Id of data lake Amazon Cognito User Pool
+    SourceS3Bucket:
+        Type: String
+    SourceKeyPrefix:
+        Type: String
+
+Resources:
+
+    DataLakeLoggingService:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Code:
+                S3Bucket: !Ref SourceS3Bucket
+                S3Key: !Join ["/", [!Ref SourceKeyPrefix,  "data-lake-logging-service.zip"]]
+            Description: "A data lake microservice function for logging functionality"
+            FunctionName: "data-lake-logging-service"
+            Handler: "index.handler"
+            MemorySize: "256"
+            Role: !Join ["", ['arn:aws:iam::', Ref: 'AWS::AccountId', ':role/data-lake-logging-role-', Ref: "AWS::Region"]]
+            Runtime: "nodejs4.3"
+            Timeout: "60"
+
+    DataLakeAdminService:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Code:
+                S3Bucket: !Ref SourceS3Bucket
+                S3Key: !Join ["/", [!Ref SourceKeyPrefix,  "data-lake-admin-service.zip"]]
+            Description: "A data lake microservice function for admin functionality"
+            FunctionName: "data-lake-admin-service"
+            Handler: "index.handler"
+            MemorySize: "256"
+            Role: !Join ["", ['arn:aws:iam::', Ref: 'AWS::AccountId', ':role/data-lake-admin-role-', Ref: "AWS::Region"]]
+            Runtime: "nodejs4.3"
+            Timeout: "60"
+
+    DataLakeSearchService:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Code:
+                S3Bucket: !Ref SourceS3Bucket
+                S3Key: !Join ["/", [!Ref SourceKeyPrefix,  "data-lake-search-service.zip"]]
+            Description: "A data lake microservice function for interacting with the elasticsearch cluster"
+            FunctionName: "data-lake-search-service"
+            Handler: "index.handler"
+            MemorySize: "256"
+            Role: !Join ["", ['arn:aws:iam::', Ref: 'AWS::AccountId', ':role/data-lake-search-role-', Ref: "AWS::Region"]]
+            Runtime: "nodejs4.3"
+            Timeout: "60"
+
+    DataLakeManifestService:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Code:
+                S3Bucket: !Ref SourceS3Bucket
+                S3Key: !Join ["/", [!Ref SourceKeyPrefix,  "data-lake-manifest-service.zip"]]
+            Description: "A data lake microservice function for manifest functionality"
+            FunctionName: "data-lake-manifest-service"
+            Handler: "index.handler"
+            MemorySize: "256"
+            Role: !Join ["", ['arn:aws:iam::', Ref: 'AWS::AccountId', ':role/data-lake-manifest-role-', Ref: "AWS::Region"]]
+            Runtime: "nodejs4.3"
+            Timeout: "300"
+
+    DataLakeCartService:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Code:
+                S3Bucket: !Ref SourceS3Bucket
+                S3Key: !Join ["/", [!Ref SourceKeyPrefix,  "data-lake-cart-service.zip"]]
+            Description: "A data lake microservice function for cart functionality"
+            FunctionName: "data-lake-cart-service"
+            Handler: "index.handler"
+            MemorySize: "256"
+            Role: !Join ["", ['arn:aws:iam::', Ref: 'AWS::AccountId', ':role/data-lake-cart-role-', Ref: "AWS::Region"]]
+            Runtime: "nodejs4.3"
+            Timeout: "60"
+
+    DataLakePackagesService:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Code:
+                S3Bucket: !Ref SourceS3Bucket
+                S3Key: !Join ["/", [!Ref SourceKeyPrefix,  "data-lake-package-service.zip"]]
+            Description: "A data lake microservice function for package functionality"
+            FunctionName: "data-lake-package-service"
+            Handler: "index.handler"
+            MemorySize: "256"
+            Role: !Join ["", ['arn:aws:iam::', Ref: 'AWS::AccountId', ':role/data-lake-packages-role-', Ref: "AWS::Region"]]
+            Runtime: "nodejs4.3"
+            Timeout: "300"
+
+    DataLakeProfileService:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Code:
+                S3Bucket: !Ref SourceS3Bucket
+                S3Key: !Join ["/", [!Ref SourceKeyPrefix,  "data-lake-profile-service.zip"]]
+            Description: "A data lake microservice function for profile functionality"
+            FunctionName: "data-lake-profile-service"
+            Handler: "index.handler"
+            MemorySize: "256"
+            Role: !Join ["", ['arn:aws:iam::', Ref: 'AWS::AccountId', ':role/data-lake-profile-role-', Ref: "AWS::Region"]]
+            Runtime: "nodejs4.3"
+            Timeout: "300"
+
+    DataLakeAuthorizerService:
+        Type: "AWS::Lambda::Function"
+        Properties:
+            Code:
+                S3Bucket: !Ref SourceS3Bucket
+                S3Key: !Join ["/", [!Ref SourceKeyPrefix,  "data-lake-authorizer.zip"]]
+            Description: "A data lake microservice function for custom authorizer functionality"
+            FunctionName: "data-lake-authorizer"
+            Handler: "index.handler"
+            MemorySize: "256"
+            Role: !Join ["", ['arn:aws:iam::', Ref: 'AWS::AccountId', ':role/data-lake-authorizer-role-', Ref: "AWS::Region"]]
+            Runtime: "nodejs4.3"
+            Timeout: "60"
+
+Outputs:
+    AuthorizerArn:
+        Description: "ARN of data lake API Gateway custom authorizer function"
+        Value: !GetAtt DataLakeAuthorizerService.Arn
+    AdminArn:
+        Description: "ARN of data lake admin services function"
+        Value: !GetAtt DataLakeAdminService.Arn
+    CartArn:
+        Description: "ARN of data lake cart services function"
+        Value: !GetAtt DataLakeCartService.Arn
+    ProfileArn:
+        Description: "ARN of data lake profile services function"
+        Value: !GetAtt DataLakeProfileService.Arn
+    SearchArn:
+        Description: "ARN of data lake search services function"
+        Value: !GetAtt DataLakeSearchService.Arn
+    PackageArn:
+        Description: "ARN of data lake package services function"
+        Value: !GetAtt DataLakePackagesService.Arn
