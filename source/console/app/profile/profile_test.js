@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.profile module', function() {
+describe('dataLake.profile module', function () {
 
     var profileCtrl;
     var $scope;
@@ -16,7 +16,7 @@ describe('dataLake.profile module', function() {
     beforeEach(module('dataLake.main'));
     beforeEach(module('dataLake.profile'));
 
-    beforeEach(inject(function($controller, $rootScope, _$q_, _$state_, authService, profileFactory) {
+    beforeEach(inject(function ($controller, $rootScope, _$q_, _$state_, authService, profileFactory) {
         $scope = $rootScope.$new(); //get a childscope
 
         $state = _$state_;
@@ -25,14 +25,14 @@ describe('dataLake.profile module', function() {
         $q = _$q_;
         authDeferred = _$q_.defer();
         spyOn(authService, 'getUserInfo').and.returnValue(authDeferred.promise);
-        spyOn(profileFactory, 'getProfile').and.callFake(function(cb) {
+        spyOn(profileFactory, 'getProfile').and.callFake(function (cb) {
             cb(null, {
                 hostname: 'faketest.amazon.com'
             }); 
         });
 
         spyOn(profileFactory, 'getApiKey').and.callFake(function(cb) {
-            cb(null, {
+            cb(null, { 
                 key: 'fakesecretaccesskey'
             }); 
         });
@@ -40,8 +40,8 @@ describe('dataLake.profile module', function() {
         $blockUI = {
             start: function() {},
             stop: function() {}
-        };
-
+        };  
+  
         profileCtrl = $controller('ProfileCtrl', {
             $scope: $scope,
             $state: $state,
@@ -55,9 +55,9 @@ describe('dataLake.profile module', function() {
 
     describe('profile controller', function() {
 
-        it('should be created', function() {
+        it('should be created', function()  {
 
-            expect(profileCtrl).toBeDefined();
+            expect(profileCtrl).toBeDefi ned();
             authDeferred.resolve({
                 email: 'user@amazon.com',
                 name: 'User Name',
@@ -73,14 +73,14 @@ describe('dataLake.profile module', function() {
 
         it('should change state to changePassword when selecting to change password', function() {
 
-            $scope.changePassword();
+            $scope.changePassword(); 
             expect($state.go).toHaveBeenCalledWith('changePassword', {});
 
         });
 
         it('should generate a secret access key', function() {
 
-            $scope.generateSecretKey();
+            $scope.generateSecretKey(); 
             expect($scope.secret.key).toEqual('fakesecretaccesskey');
 
         });

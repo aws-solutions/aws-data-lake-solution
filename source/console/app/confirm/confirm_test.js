@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.confirm module', function() {
+describe('dataLake.confirm module', function () {
 
     var confirmCtrl;
     var $scope;
@@ -13,7 +13,7 @@ describe('dataLake.confirm module', function() {
     beforeEach(module('dataLake.confirm'));
     beforeEach(module('dataLake.service.auth'));
 
-    beforeEach(inject(function($controller, $rootScope, _$state_, _$q_, authService) {
+    beforeEach(inject(function ($controller, $rootScope, _$state_, _$q_, authService) {
         $scope = $rootScope.$new(); //get a childscope
 
         $state = _$state_;
@@ -36,14 +36,14 @@ describe('dataLake.confirm module', function() {
         }); //Pass it as argument as $scope's value
     }));
 
-    describe('confirm controller', function() {
+    describe('confirm controller', function () {
 
-        it('should be created', function() {
+        it('should be created', function () {
             //spec body
             expect(confirmCtrl).toBeDefined();
         });
 
-        it('should update password when confirming new password succeeds', function() {
+        it('should update password when confirming new password succeeds', function () {
             $scope.setPassword({
                 newPassword: 'test12312341234!!'
             }, true);
@@ -52,7 +52,7 @@ describe('dataLake.confirm module', function() {
             expect($state.go).toHaveBeenCalledWith('dashboard', {});
         });
 
-        it('should show error when confirming new password fails', function() {
+        it('should show error when confirming new password fails', function () {
             $scope.setPassword({
                 newPassword: 'test12312341234!!'
             }, true);
@@ -61,6 +61,5 @@ describe('dataLake.confirm module', function() {
             expect($scope.errormessage).toEqual(
                 'An unexpected error has occurred. Please try again.');
         });
-
     });
 });

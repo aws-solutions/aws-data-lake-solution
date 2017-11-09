@@ -21,78 +21,77 @@ angular.module('dataLake.profile', ['dataLake.main', 'dataLake.utils', 'dataLake
     'dataLake.service.auth'
 ])
 
-.config(['$stateProvider', '$urlRouterProvider', function($stateProvider,
-    $urlRouterProvider) {
-    $stateProvider.state('profile', {
-        url: '/profile',
-        views: {
-            '': {
-                templateUrl: 'main/main.html',
-                controller: 'MainCtrl'
+    .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider,
+        $urlRouterProvider) {
+        $stateProvider.state('profile', {
+            url: '/profile',
+            views: {
+                '': {
+                    templateUrl: 'main/main.html',
+                    controller: 'MainCtrl'
+                },
+                '@profile': {
+                    templateUrl: 'profile/profile.html',
+                    controller: 'ProfileCtrl'
+                }
             },
-            '@profile': {
-                templateUrl: 'profile/profile.html',
-                controller: 'ProfileCtrl'
-            }
-        },
-        authenticate: true
-    });
-}])
+            authenticate: true
+        });
+    }])
 
-.controller('ProfileCtrl', function($scope, $state, $stateParams, $blockUI, authService, profileFactory) {
+    .controller('ProfileCtrl', function ($scope, $state, $stateParams, $blockUI, authService, profileFactory) {
 
-    $scope.title = '';
-    $scope.user = {};
-    $scope.profile = {};
-    $scope.secret = '';
+        $scope.title = '';
+        $scope.user = {};
+        $scope.profile = {};
+        $scope.secret = '';
 
-    var getUserDetails = function() {
-        $blockUI.start();
+        var getUserDetails = function () {
+            $blockUI.start();
 
-        authService.getUserInfo().then(function(result) {
-            profileFactory.getProfile(function(err, profile) {
+            authService.getUserInfo().then(function (result) {
+                profileFactory.getProfile(function (err, profile) {
+                    if (err) {
+                        console.log('error', err);
+                        $blockUI.stop();
+                        return;
+                    }
+
+                    $scope.profile = profile;
+                    $scope.user = result;
+                    $blockUI.stop();
+                });
+            }, function (msg) {
+                $blockUI.stop();
+                console.log('Unable to retrieve the user session.');
+                $state.go('signin', {});
+            });
+
+        };
+
+        $scope.closeSecretModal = function () {
+            $scope.secret = '';
+            $scope.showSecretModal = false;
+        };
+
+        $scope.changePassword = function () {
+            $state.go('changePassword', {});
+        };
+
+        $scope.generateSecretKey = function () {
+            profileFactory.getApiKey(function (err, secret) {
                 if (err) {
                     console.log('error', err);
                     $blockUI.stop();
                     return;
                 }
 
-                $scope.profile = profile;
-                $scope.user = result;
+                $scope.secret = secret;
+                $scope.showSecretModal = true;
                 $blockUI.stop();
             });
-        }, function(msg) {
-            $blockUI.stop();
-            console.log('Unable to retrieve the user session.');
-            $state.go('signin', {});
-        });
 
-    };
+        };
 
-    $scope.closeSecretModal = function() {
-        $scope.secret = '';
-        $scope.showSecretModal = false;
-    };
-
-    $scope.changePassword = function() {
-        $state.go('changePassword', {});
-    };
-
-    $scope.generateSecretKey = function() {
-        profileFactory.getApiKey(function(err, secret) {
-            if (err) {
-                console.log('error', err);
-                $blockUI.stop();
-                return;
-            }
-
-            $scope.secret = secret;
-            $scope.showSecretModal = true;
-            $blockUI.stop();
-        });
-
-    };
-
-    getUserDetails();
-
-});
+        getUserDetails();
+    });

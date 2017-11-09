@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.admin.users spec', function() {
+describe('dataLake.admin.users spec', function () {
 
     var adminUsersCtrl;
     var $scope;
@@ -11,7 +11,7 @@ describe('dataLake.admin.users spec', function() {
     beforeEach(module('dataLake.utils'));
     beforeEach(module('dataLake.admin.users'));
 
-    beforeEach(inject(function($controller, $rootScope, _$state_, adminUserFactory) {
+    beforeEach(inject(function ($controller, $rootScope, _$state_, adminUserFactory) {
         $scope = $rootScope.$new();
 
         $state = _$state_;
@@ -25,30 +25,30 @@ describe('dataLake.admin.users spec', function() {
             name: 'Test User 2'
         }];
 
-        spyOn(adminUserFactory, 'listUsers').and.callFake(function(cb) {
-            cb(null, users); 
+        spyOn(adminUserFactory, 'listUsers').and.callFake(function (cb) {
+            cb(null, users);
         });
 
         $blockUI = {
-            start: function() {},
-            stop: function() {}
-        };
+            start: functio n() {},
+        stop: function() {}
+    };
 
-        adminUsersCtrl = $controller('AdminUsersCtrl', {
-            $scope: $scope,
-            $state: $state,
+nUsersCtrl = $controller('AdminUsersCtrl', {
+    $scope: $scope,
+        $state: $state,
             $blockUI: $blockUI,
-            adminUserFactory: adminUserFactory
+    adminUserFactory: adminUserFactory
         });
     }));
 
-    describe('cart controller', function() {
+ describe('cart controller', functio n() {
 
-        it('should be created', function() {
-            //spec body
-            expect(adminUsersCtrl).toBeDefined();
-            $scope.$apply();
-            expect($scope.users.length).toEqual(2);
+    should be created', function() {
+    //spec body
+    expect(adminUsersCtrl).toBeDefined();
+    $scope.$apply();
+    expect($scope.users.length).toEqual(2);
         });
 
     });

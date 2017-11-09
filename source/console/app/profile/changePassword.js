@@ -19,48 +19,47 @@
 
 angular.module('dataLake.profile.changepassword', ['dataLake.main', 'dataLake.utils', 'dataLake.service.auth'])
 
-.config(['$stateProvider', '$urlRouterProvider', function($stateProvider,
-    $urlRouterProvider) {
-    $stateProvider.state('changePassword', {
-        url: '/profile/changepassword',
-        views: {
-            '': {
-                templateUrl: 'main/main.html',
-                controller: 'MainCtrl'
+    .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider,
+        $urlRouterProvider) {
+        $stateProvider.state('changePassword', {
+            url: '/profile/changepassword',
+            views: {
+                '': {
+                    templateUrl: 'main/main.html',
+                    controller: 'MainCtrl'
+                },
+                '@changePassword': {
+                    templateUrl: 'profile/changePassword.html',
+                    controller: 'ChangePasswordCtrl'
+                }
             },
-            '@changePassword': {
-                templateUrl: 'profile/changePassword.html',
-                controller: 'ChangePasswordCtrl'
-            }
-        },
-        authenticate: true
-    });
-}])
+            authenticate: true
+        });
+    }])
 
-.controller('ChangePasswordCtrl', function($scope, $state, $stateParams, $blockUI, authService) {
+    .controller('ChangePasswordCtrl', function ($scope, $state, $stateParams, $blockUI, authService) {
 
-    $scope.changeinfo = {
-        newPassword: ''
-    };
-    $scope.showError = false;
+        $scope.changeinfo = {
+            newPassword: ''
+        };
+        $scope.showError = false;
 
-    $scope.changePassword = function(newinfo, isValid) {
-        $blockUI.start();
-        if (isValid) {
-            authService.changePassword(newinfo.oldPassword, newinfo.newPassword).then(function(resp) {
+        $scope.changePassword = function (newinfo, isValid) {
+            $blockUI.start();
+            if (isValid) {
+                authService.changePassword(newinfo.oldPassword, newinfo.newPassword).then(function (resp) {
                     $blockUI.stop();
                     $state.go('profile', {});
                 },
-                function(msg) {
-                    $blockUI.stop();
-                    $scope.showError = true;
-                    console.log('Unable to change the user password.');
-                    return;
-                });
-        } else {
-            $scope.showError = true;
-            $blockUI.stop();
-        }
-    };
-
-});
+                    function (msg) {
+                        $blockUI.stop();
+                        $scope.showError = true;
+                        console.log('Unable to change the user password.');
+                        return;
+                    });
+            } else {
+                $scope.showError = true;
+                $blockUI.stop();
+            }
+        };
+    });

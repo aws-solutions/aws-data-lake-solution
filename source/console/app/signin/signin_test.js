@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.signin spec', function() {
+describe('dataLake.signin spec', function () {
 
     var signinCtrl;
     var $scope;
@@ -13,7 +13,7 @@ describe('dataLake.signin spec', function() {
     beforeEach(module('dataLake.signin'));
     beforeEach(module('dataLake.service.auth'));
 
-    beforeEach(inject(function($controller, $rootScope, _$state_, _$q_, authService) {
+    beforeEach(inject(function ($controller, $rootScope, _$state_, _$q_, authService) {
         $scope = $rootScope.$new(); //get a childscope
 
         $state = _$state_;
@@ -24,8 +24,8 @@ describe('dataLake.signin spec', function() {
         spyOn(authService, 'signin').and.returnValue(deferred.promise);
 
         $blockUI = {
-            start: function() {},
-            stop: function() {}
+            start: function () { },
+            stop: function () { }
         };
 
         signinCtrl = $controller('SigninCtrl', {
@@ -36,14 +36,14 @@ describe('dataLake.signin spec', function() {
         }); //Pass it as argument as $scope's value
     }));
 
-    describe('signin controller', function() {
+    describe('signin controller', function () {
 
-        it('can get an instance of SigninCtrl', function() {
+        it('can get an instance of SigninCtrl', function () {
             //spec body
             expect(signinCtrl).toBeDefined();
         });
 
-        it('should go to confirm state when password change required', function() {
+        it('should go to confirm state when password change required', function () {
             $scope.signin({
                 email: 'user@amazon.com',
                 password: 'password'

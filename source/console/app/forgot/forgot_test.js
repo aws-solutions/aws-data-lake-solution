@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.forgot module', function() {
+describe('dataLake.forgot module', function () {
 
     var forgotCtrl;
     var $scope;
@@ -12,7 +12,7 @@ describe('dataLake.forgot module', function() {
     beforeEach(module('dataLake.forgot'));
     beforeEach(module('dataLake.service.auth'));
 
-    beforeEach(inject(function($controller, $rootScope, _$q_, _$state_, authService) {
+    beforeEach(inject(function ($controller, $rootScope, _$q_, _$state_, authService) {
         $scope = $rootScope.$new(); //get a childscope
 
         $state = _$state_;
@@ -30,14 +30,14 @@ describe('dataLake.forgot module', function() {
         }); //Pass it as argument as $scope's value
     }));
 
-    describe('forgot controller', function() {
+    describe('forgot controller', function () {
 
-        it('should be created', function() {
+        it('should be created', function () {
             //spec body
             expect(forgotCtrl).toBeDefined();
         });
 
-        it('should initiate congnito email when forgot password', function() {
+        it('should initiate congnito email when forgot password', function () {
             $scope.forgotPassword({
                 email: 'user@amazon.com'
             }, true);
@@ -46,7 +46,7 @@ describe('dataLake.forgot module', function() {
             expect($scope.showVerification).toEqual(true);
         });
 
-        it('should show error when forgot password fails', function() {
+        it('should show error when forgot password fails', function () {
             $scope.forgotPassword({
                 email: 'user@amazon.com'
             }, true);
@@ -56,7 +56,7 @@ describe('dataLake.forgot module', function() {
                 'An unexpected error has occurred. Please try again.');
         });
 
-        it('should go to signin after changing password', function() {
+        it('should go to signin after changing password', function () {
             $scope.changePassword({
                 email: 'user@amazon.com',
                 verificationCode: '12345',
@@ -67,7 +67,7 @@ describe('dataLake.forgot module', function() {
             expect($state.go).toHaveBeenCalledWith('signin', {});
         });
 
-        it('should show error when changing password fails', function() {
+        it('should show error when changing password fails', function () {
             $scope.changePassword({
                 email: 'user@amazon.com',
                 verificationCode: '12345',

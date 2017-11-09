@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.dashboard module', function() {
+describe('dataLake.dashboard module', function () {
 
     var dashboardCtrl;
     var $scope;
@@ -11,7 +11,7 @@ describe('dataLake.dashboard module', function() {
     beforeEach(module('dataLake.utils'));
     beforeEach(module('dataLake.dashboard'));
 
-    beforeEach(inject(function($controller, $rootScope, _$state_) {
+    beforeEach(inject(function ($controller, $rootScope, _$state_) {
         $scope = $rootScope.$new(); //get a childscope
 
         $state = _$state_;
@@ -24,16 +24,16 @@ describe('dataLake.dashboard module', function() {
         }); //Pass it as argument as $scope's value
     }));
 
-    describe('dashboard controller', function() {
+    describe('dashboard controller', function () {
 
-        it('should be created', function() {
+        it('should be created', function () {
             //spec body
             expect(dashboardCtrl).toBeDefined();
             $scope.$apply();
             expect($scope.showIntroModal).toEqual(true);
         });
 
-        it('should change state to search when searching', function() {
+        it('should change state to search when searching', function () {
 
             $scope.search('test');
             expect($state.go).toHaveBeenCalledWith('search', {

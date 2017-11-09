@@ -19,40 +19,39 @@
 
 angular.module('dataLake.factory.search', ['ngResource', 'dataLake.service.auth'])
 
-.factory('searchFactory', function($resource, $state, authService) {
+    .factory('searchFactory', function ($resource, $state, authService) {
 
-    var factory = {};
+        var factory = {};
 
-    var searchResource = function(token) {
-        var _url = [APIG_ENDPOINT, '/search'].join('');
-        return $resource(_url, {}, {
-            query: {
-                method: 'GET',
-                headers: {
-                    Auth: token
+        var searchResource = function (token) {
+            var _url = [APIG_ENDPOINT, '/search'].join('');
+            return $resource(_url, {}, {
+                query: {
+                    method: 'GET',
+                    headers: {
+                        Auth: token
+                    }
                 }
-            }
-        });
-    };
-
-    factory.search = function(terms, cb) {
-
-        authService.getUserAccessToken().then(function(token) {
-            var _token = ['tk:', token.jwtToken].join('');
-            searchResource(_token).query({
-                term: terms
-            }, function(data) {
-                return cb(null, data.Items);
-            }, function(err) {
-                return cb(err, null);
             });
-        }, function(msg) {
-            console.log('Unable to retrieve the user session.');
-            $state.go('signin', {});
-        });
+        };
 
-    };
+        factory.search = function (terms, cb) {
 
-    return factory;
+            authService.getUserAccessToken().then(function (token) {
+                var _token = ['tk:', token.jwtToken].join('');
+                searchResource(_token).query({
+                    term: terms
+                }, function (data) {
+                    return cb(null, data.Items);
+                }, function (err) {
+                    return cb(err, null);
+                });
+            }, function (msg) {
+                console.log('Unable to retrieve the user session.');
+                $state.go('signin', {});
+            });
 
-});
+        };
+
+        return factory;
+    });

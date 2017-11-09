@@ -19,41 +19,40 @@
 
 angular.module('dataLake.confirm', [])
 
-.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
-    $stateProvider.state('confirm', {
-        url: '/confirm',
-        params: {
-            email: '',
-            password: ''
-        },
-        views: {
-            '': {
-                templateUrl: 'confirm/confirm.html',
-                controller: 'ConfirmCtrl'
+    .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
+        $stateProvider.state('confirm', {
+            url: '/confirm',
+            params: {
+                email: '',
+                password: ''
+            },
+            views: {
+                '': {
+                    templateUrl: 'confirm/confirm.html',
+                    controller: 'ConfirmCtrl'
+                }
             }
-        }
+        });
+    }])
+
+    .controller('ConfirmCtrl', function ($scope, $state, $stateParams, authService) {
+
+        $scope.errormessage = '';
+
+        $scope.setPassword = function (newuser, isValid) {
+            if (isValid) {
+                newuser.email = $stateParams.email;
+                newuser.password = $stateParams.password;
+
+                authService.signin(newuser, 'password_challenge').then(function () {
+                    $state.go('dashboard', {});
+                }, function (msg) {
+                    $scope.errormessage = 'An unexpected error has occurred. Please try again.';
+                    return;
+                });
+
+            } else {
+                $scope.errormessage = 'There are still invalid fields.';
+            }
+        };
     });
-}])
-
-.controller('ConfirmCtrl', function($scope, $state, $stateParams, authService) {
-
-    $scope.errormessage = '';
-
-    $scope.setPassword = function(newuser, isValid) {
-        if (isValid) {
-            newuser.email = $stateParams.email;
-            newuser.password = $stateParams.password;
-
-            authService.signin(newuser, 'password_challenge').then(function() {
-                $state.go('dashboard', {});
-            }, function(msg) {
-                $scope.errormessage = 'An unexpected error has occurred. Please try again.';
-                return;
-            });
-
-        } else {
-            $scope.errormessage = 'There are still invalid fields.';
-        }
-    };
-
-});

@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.factory.profile spec', function() {
+describe('dataLake.factory.profile spec', function () {
 
     var profileFactory;
     var $resource;
@@ -12,7 +12,7 @@ describe('dataLake.factory.profile spec', function() {
     beforeEach(module('ui.router'));
     beforeEach(module('dataLake.factory.profile'));
 
-    beforeEach(inject(function($injector, _$q_, _$state_, authService) {
+    beforeEach(inject(function ($injector, _$q_, _$state_, authService) {
         $state = _$state_;
         spyOn($state, 'go');
 
@@ -30,13 +30,13 @@ describe('dataLake.factory.profile spec', function() {
 
     }));
 
-    describe('profile factory', function() {
+    describe('profile factory', function () {
 
-        it('should be created', function() {
+        it('should be created', function () {
             expect(profileFactory).toBeDefined();
         });
 
-        it('should return user profile information', function() {
+        it('should return user profile information', function () {
             var _url = [APIG_ENDPOINT, '/profile'].join('');
             $httpBackend.expectGET(_url).respond({
                 hostname: 'faketest.amazon.com'
@@ -44,12 +44,12 @@ describe('dataLake.factory.profile spec', function() {
 
             var observer = {
                 result: {},
-                callback: function(data) {
+                callback: function (data) {
                     this.result = data;
                 }
             };
 
-            profileFactory.getProfile(function(err, data) {
+            profileFactory.getProfile(function (err, data) {
                 observer.callback(data);
             });
 
@@ -61,7 +61,7 @@ describe('dataLake.factory.profile spec', function() {
             expect(observer.result.hostname).toEqual('faketest.amazon.com');
         });
 
-        it('should create secret access key', function() {
+        it('should create secret access key', function () {
             var _url = [APIG_ENDPOINT, '/profile/apikey'].join('');
             $httpBackend.expectGET(_url).respond({
                 key: 'fakesecretaccesskey'
@@ -69,12 +69,12 @@ describe('dataLake.factory.profile spec', function() {
 
             var observer = {
                 result: {},
-                callback: function(data) {
+                callback: function (data) {
                     this.result = data;
                 }
             };
 
-            profileFactory.getApiKey(function(err, data) {
+            profileFactory.getApiKey(function (err, data) {
                 observer.callback(data);
             });
 

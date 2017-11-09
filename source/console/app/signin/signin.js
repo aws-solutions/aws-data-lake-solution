@@ -19,47 +19,46 @@
 
 angular.module('dataLake.signin', ['dataLake.utils'])
 
-.config(['$stateProvider', '$urlRouterProvider', function($stateProvider, $urlRouterProvider) {
-    $stateProvider.state('signin', {
-        url: '/signin',
-        views: {
-            '': {
-                templateUrl: 'signin/signin.html',
-                controller: 'SigninCtrl'
+    .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider, $urlRouterProvider) {
+        $stateProvider.state('signin', {
+            url: '/signin',
+            views: {
+                '': {
+                    templateUrl: 'signin/signin.html',
+                    controller: 'SigninCtrl'
+                }
             }
-        }
+        });
+    }])
+
+    .controller('SigninCtrl', function ($scope, $state, authService, $blockUI) {
+
+        $scope.errormessage = '';
+        $blockUI.stop();
+
+        $scope.signin = function (user, isValid) {
+
+            if (isValid) {
+                authService.signin(user, '').then(function (resp) {
+                    if (resp.state == 'login_success') {
+                        $state.go('dashboard', {});
+                    } else if (resp.state == 'new_password_required') {
+                        $state.go('confirm', {
+                            email: user.email,
+                            password: user.password
+                        });
+                    }
+                }, function (msg) {
+                    $scope.errormessage = 'Unable to sign in user. Please check your username and password.';
+                    if ($scope.$$phase != '$digest') {
+                        $scope.$apply();
+                    }
+
+                    return;
+                });
+
+            } else {
+                $scope.errormessage = 'There are still invalid fields.';
+            }
+        };
     });
-}])
-
-.controller('SigninCtrl', function($scope, $state, authService, $blockUI) {
-
-    $scope.errormessage = '';
-    $blockUI.stop();
-
-    $scope.signin = function(user, isValid) {
-
-        if (isValid) {
-            authService.signin(user, '').then(function(resp) {
-                if (resp.state == 'login_success') {
-                    $state.go('dashboard', {});
-                } else if (resp.state == 'new_password_required') {
-                    $state.go('confirm', {
-                        email: user.email,
-                        password: user.password
-                    });
-                }
-            }, function(msg) {
-                $scope.errormessage = 'Unable to sign in user. Please check your username and password.';
-                if ($scope.$$phase != '$digest') {
-                    $scope.$apply();
-                }
-
-                return;
-            });
-
-        } else {
-            $scope.errormessage = 'There are still invalid fields.';
-        }
-    };
-
-});

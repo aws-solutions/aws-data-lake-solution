@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.profile.changepassword module', function() {
+describe('dataLake.profile.changepassword module', function () {
 
     var changePasswordCtrl;
     var $scope;
@@ -15,7 +15,7 @@ describe('dataLake.profile.changepassword module', function() {
     beforeEach(module('dataLake.main'));
     beforeEach(module('dataLake.profile.changepassword'));
 
-    beforeEach(inject(function($controller, $rootScope, _$q_, _$state_, authService) {
+    beforeEach(inject(function ($controller, $rootScope, _$q_, _$state_, authService) {
         $scope = $rootScope.$new(); //get a childscope
 
         $state = _$state_;
@@ -26,8 +26,8 @@ describe('dataLake.profile.changepassword module', function() {
         spyOn(authService, 'changePassword').and.returnValue(deferred.promise);
 
         $blockUI = {
-            start: function() {},
-            stop: function() {}
+            start: function () { },
+            stop: function () { }
         };
 
         changePasswordCtrl = $controller('ChangePasswordCtrl', {
@@ -40,14 +40,14 @@ describe('dataLake.profile.changepassword module', function() {
 
     }));
 
-    describe('changepassword controller', function() {
+    describe('changepassword controller', function () {
 
-        it('should be created', function() {
+        it('should be created', function () {
             expect(changePasswordCtrl).toBeDefined();
             $scope.$digest();
         });
 
-        it('should change password if change password called', function() {
+        it('should change password if change password called', function () {
             $scope.changePassword({
                 oldPassword: 'test123',
                 newPassword: '321test'
