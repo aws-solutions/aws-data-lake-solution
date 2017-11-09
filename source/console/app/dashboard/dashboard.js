@@ -19,61 +19,61 @@
 
 angular.module('dataLake.dashboard', ['dataLake.main', 'dataLake.utils'])
 
-.config(['$stateProvider', '$urlRouterProvider', function($stateProvider,
-    $urlRouterProvider) {
-    $stateProvider.state('dashboard', {
-        url: '/dashboard',
-        views: {
-            '': {
-                templateUrl: 'main/main.html',
-                controller: 'MainCtrl'
+    .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider,
+        $urlRouterProvider) {
+        $stateProvider.state('dashboard', {
+            url: '/dashboard',
+            views: {
+                '': {
+                    templateUrl: 'main/main.html',
+                    controller: 'MainCtrl'
+                },
+                '@dashboard': {
+                    templateUrl: 'dashboard/dashboard.html',
+                    controller: 'DashboardCtrl'
+                }
             },
-            '@dashboard': {
-                templateUrl: 'dashboard/dashboard.html',
-                controller: 'DashboardCtrl'
-            }
-        },
-        authenticate: true
-    });
-}])
-
-.controller('DashboardCtrl', function($scope, $state, $localstorage) {
-
-    $scope.showIntroModal = false;
-    $scope.currentSlide = 0;
-    $scope.slideTitle = 'Welcome to the Data Lake Solution';
-    $scope.navText = 'Next';
-
-    $scope.search = function(terms) {
-        $state.go('search', {
-            terms: terms
+            authenticate: true
         });
-    };
+    }])
 
-    $scope.nextIntroSlide = function() {
-        $scope.currentSlide++;
-        switch ($scope.currentSlide) {
-            case 1:
-                $scope.slideTitle = 'Secure, Durable and Highly-Scalable';
-                break;
-            case 2:
-                $scope.slideTitle = 'Upload new data or link existing data';
-                break;
-            case 3:
-                $scope.slideTitle = 'Get access to the data you\'re interested in';
-                $scope.navText = 'Get Started';
-                break;
-            case 4:
-                $localstorage.set('showIntro', 'false');
-                $scope.showIntroModal = false;
-                break;
-            default:
-                break;
+    .controller('DashboardCtrl', function ($scope, $state, $localstorage) {
+
+        $scope.showIntroModal = false;
+        $scope.currentSlide = 0;
+        $scope.slideTitle = 'Welcome to the Data Lake Solution';
+        $scope.navText = 'Next';
+
+        $scope.search = function (terms) {
+            $state.go('search', {
+                terms: terms
+            });
+        };
+
+        $scope.nextIntroSlide = function () {
+            $scope.currentSlide++;
+            switch ($scope.currentSlide) {
+                case 1:
+                    $scope.slideTitle = 'Secure, Durable and Highly-Scalable';
+                    break;
+                case 2:
+                    $scope.slideTitle = 'Upload new data or link existing data';
+                    break;
+                case 3:
+                    $scope.slideTitle = 'Get access to the data you\'re interested in';
+                    $scope.navText = 'Get Started';
+                    break;
+                case 4:
+                    $localstorage.set('showIntro', 'false');
+                    $scope.showIntroModal = false;
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        if ($localstorage.get('showIntro', 'true') === 'true') {
+            $scope.showIntroModal = true;
         }
-    };
 
-    if ($localstorage.get('showIntro', 'true') === 'true') {
-        $scope.showIntroModal = true;
-    }
-
-});
+    });

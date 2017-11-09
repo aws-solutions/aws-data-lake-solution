@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.factory.search spec', function() {
+describe('dataLake.factory.search spec', function () {
 
     var searchFactory;
     var $resource;
@@ -12,7 +12,7 @@ describe('dataLake.factory.search spec', function() {
     beforeEach(module('ui.router'));
     beforeEach(module('dataLake.factory.search'));
 
-    beforeEach(inject(function($injector, _$q_, _$state_, authService) {
+    beforeEach(inject(function ($injector, _$q_, _$state_, authService) {
         $state = _$state_;
         spyOn($state, 'go');
 
@@ -30,13 +30,13 @@ describe('dataLake.factory.search spec', function() {
 
     }));
 
-    describe('search factory', function() {
+    describe('search factory', function () {
 
-        it('should be created', function() {
+        it('should be created', function () {
             expect(searchFactory).toBeDefined();
         });
 
-        it('should return results when searched', function() {
+        it('should return results when searched', function () {
             var _url = [APIG_ENDPOINT, '/search?term=test'].join('');
             $httpBackend.expectGET(_url).respond({
                 Items: [{
@@ -47,12 +47,12 @@ describe('dataLake.factory.search spec', function() {
 
             var observer = {
                 result: {},
-                callback: function(data) {
+                callback: function (data) {
                     this.result = data;
                 }
             };
 
-            searchFactory.search('test', function(err, data) {
+            searchFactory.search('test', function (err, data) {
                 observer.callback(data);
             });
 

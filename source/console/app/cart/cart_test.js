@@ -1,6 +1,6 @@
 'use strict';
 
-describe('dataLake.cart spec', function() {
+describe('dataLake.cart spec', function () {
 
     var cartCtrl;
     var $scope;
@@ -11,7 +11,7 @@ describe('dataLake.cart spec', function() {
     beforeEach(module('dataLake.utils'));
     beforeEach(module('dataLake.cart'));
 
-    beforeEach(inject(function($controller, $rootScope, $_, _$state_, cartFactory) {
+    beforeEach(inject(function ($controller, $rootScope, $_, _$state_, cartFactory) {
         $scope = $rootScope.$new(); //get a childscope
 
         $state = _$state_;
@@ -29,29 +29,29 @@ describe('dataLake.cart spec', function() {
             cart_item_status: 'generated'
         }];
 
-        spyOn(cartFactory, 'listCart').and.callFake(function(cb) {
-            cb(null, cartItems); 
+        spyOn(cartFactory, 'listCart').and.callFake(function (cb) {
+            cb(null, cartItems);
         });
 
-        spyOn(cartFactory, 'getCartCount').and.callFake(function(cb) {
-            cb(null, cartItems.length); 
+        spyOn(cartFactory, 'getCartCount').and.callFake(function( cb) {
+            cb(null, cartItems.length);
         });
 
-        spyOn(cartFactory, 'deleteCartItem').and.callFake(function(itemid, cb) {
+        spyOn(cartFactory 'deleteCartItem').and.callFake(function( itemid, cb) {
             cartItems.splice(0, 1);
-            cb(null, {});
+            cb(null, {}); 
         });
 
         spyOn(cartFactory, 'checkoutCart').and.callFake(function(type, cb) {
             cartItems[0].cart_item_status = 'generated';
-            cb(null, 'manifest file generation initiated');
+            cb(null, 'manifest file generation initiated'); 
         });
 
         $blockUI = {
-            start: function() {},
-            stop: function() {}
-        };
-
+            art: function()  {}, 
+            op: function()  {  
+        };  
+  
         cartCtrl = $controller('CartCtrl', {
             $scope: $scope,
             $state: $state,
@@ -63,30 +63,30 @@ describe('dataLake.cart spec', function() {
 
     describe('cart controller', function() {
 
-        it('should be created', function() {
+        it('should be created', function () {
             //spec body
-            expect(cartCtrl).toBeDefined();
+            expect(cartCtrl).toBeDefined ();
             $scope.$apply();
             expect($scope.cart.length).toEqual(1);
             expect($scope.manifests.length).toEqual(1);
         });
 
-        it('should remove an item when deleting cart item succeeds', function() {
+        it('should remove an item when deleting cart item succeeds', function( ) {
             $scope.removeCartItem(1);
-            $scope.$apply();
+            $scope.$apply(); 
             expect($scope.cart.length).toEqual(0);
             expect($scope.manifests.length).toEqual(1);
         });
 
-        it('should show manifest options when checking out succeeds', function() {
+        it('should show manifest options when checking out succeeds', function( ) {
             $scope.checkout();
-            $scope.$apply();
+            $scope.$apply(); 
             expect($scope.showCheckoutModal).toEqual(true);
         });
 
-        it('should initiate manifest creation after selecting check out options', function() {
+        it('should initiate manifest creation after selecting check out options', function( ) {
             $scope.generateManifest('bucket-key');
-            $scope.$apply();
+            $scope.$apply(); 
             expect($scope.showCheckoutModal).toEqual(false);
             expect($scope.cart.length).toEqual(0);
             expect($scope.manifests.length).toEqual(2);

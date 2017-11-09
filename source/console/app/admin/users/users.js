@@ -19,48 +19,47 @@
 
 angular.module('dataLake.admin.users', ['dataLake.main', 'dataLake.utils', 'dataLake.factory.admin'])
 
-.config(['$stateProvider', '$urlRouterProvider', function($stateProvider,
-    $urlRouterProvider) {
-    $stateProvider.state('admin_users', {
-        url: '/admin/users',
-        views: {
-            '': {
-                templateUrl: 'main/main.html',
-                controller: 'MainCtrl'
+    .config(['$stateProvider', '$urlRouterProvider', function ($stateProvider,
+        $urlRouterProvider) {
+        $stateProvider.state('admin_users', {
+            url: '/admin/users',
+            views: {
+                '': {
+                    templateUrl: 'main/main.html',
+                    controller: 'MainCtrl'
+                },
+                '@admin_users': {
+                    templateUrl: 'admin/users/users.html',
+                    controller: 'AdminUsersCtrl'
+                }
             },
-            '@admin_users': {
-                templateUrl: 'admin/users/users.html',
-                controller: 'AdminUsersCtrl'
-            }
-        },
-        adminAuthenticate: true
-    });
-}])
-
-.controller('AdminUsersCtrl', function($scope, $state, $blockUI, adminUserFactory) {
-
-    $scope.results = [];
-    $scope.showerror = false;
-
-    var getUsers = function() {
-        $blockUI.start();
-        adminUserFactory.listUsers(function(err, users) {
-            if (err) {
-                console.log('error', err);
-                $scope.showerror = true;
-                $blockUI.stop();
-                return;
-            }
-
-            $scope.users = users;
-            $blockUI.stop();
+            adminAuthenticate: true
         });
-    };
+    }])
 
-    $scope.refresh = function() {
+    .controller('AdminUsersCtrl', function ($scope, $state, $blockUI, adminUserFactory) {
+
+        $scope.results = [];
+        $scope.showerror = false;
+
+        var getUsers = function () {
+            $blockUI.start();
+            adminUserFactory.listUsers(function (err, users) {
+                if (err) {
+                    console.log('error', err);
+                    $scope.showerror = true;
+                    $blockUI.stop();
+                    return;
+                }
+
+                $scope.users = users;
+                $blockUI.stop();
+            });
+        };
+
+        $scope.refresh = function () {
+            getUsers();
+        };
+
         getUsers();
-    };
-
-    getUsers();
-
-});
+    });

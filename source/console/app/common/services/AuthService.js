@@ -18,9 +18,9 @@
 'use strict';
 
 angular.module('dataLake.service.auth', ['dataLake.utils'])
-    .service('authService', function($q, $_, $localstorage) {
+    .service('authService', function ($q, $_, $localstorage) {
 
-        this.signup = function(newuser) {
+        this.signup = function (newuser) {
             var deferred = $q.defer();
 
             newuser.username = newuser.email.replace('@', '_').replace(/\./g, '_');
@@ -58,7 +58,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
             attributeList.push(attributeName);
             attributeList.push(attributeDisplayName);
 
-            userPool.signUp(newuser.username, newuser.password, attributeList, null, function(err, result) {
+            userPool.signUp(newuser.username, newuser.password, attributeList, null, function (err, result) {
                 if (err) {
                     console.log(err);
                     deferred.reject(err.message);
@@ -71,7 +71,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
         };
 
-        this.newPassword = function(newuser) {
+        this.newPassword = function (newuser) {
             var deferred = $q.defer();
 
             newuser.username = newuser.email.replace('@', '_').replace(/\./g, '_');
@@ -93,7 +93,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
             return deferred.promise;
         };
 
-        this.forgot = function(user) {
+        this.forgot = function (user) {
             var deferred = $q.defer();
 
             var _username = user.email.replace('@', '_').replace(/\./g, '_');
@@ -113,10 +113,10 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
             var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
             cognitoUser.forgotPassword({
-                onSuccess: function(result) {
+                onSuccess: function (result) {
                     deferred.resolve();
                 },
-                onFailure: function(err) {
+                onFailure: function (err) {
                     console.log(err);
                     var _msg = err.message;
                     deferred.reject(_msg);
@@ -126,7 +126,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
             return deferred.promise;
         };
 
-        this.resetPassword = function(user) {
+        this.resetPassword = function (user) {
             var deferred = $q.defer();
 
             var _username = user.email.replace('@', '_').replace(/\./g, '_');
@@ -145,10 +145,10 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
             var cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
             cognitoUser.confirmPassword(user.verificationCode, user.password, {
-                onSuccess: function(result) {
+                onSuccess: function (result) {
                     deferred.resolve();
                 },
-                onFailure: function(err) {
+                onFailure: function (err) {
                     console.log(err);
                     var _msg = err.message;
                     deferred.reject(_msg);
@@ -158,7 +158,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
             return deferred.promise;
         };
 
-        this.changePassword = function(oldpassword, newpassword) {
+        this.changePassword = function (oldpassword, newpassword) {
             var deferred = $q.defer();
 
             var data = {
@@ -169,13 +169,13 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
             var userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(data);
             var cognitoUser = userPool.getCurrentUser();
 
-            cognitoUser.getSession(function(err, session) {
+            cognitoUser.getSession(function (err, session) {
                 if (err) {
                     console.log(err);
                     var _msg = err.message;
                     deferred.reject(_msg);
                 } else {
-                    cognitoUser.changePassword(oldpassword, newpassword, function(err, result) {
+                    cognitoUser.changePassword(oldpassword, newpassword, function (err, result) {
                         if (err) {
                             console.log(err);
                             var _msg = err.message;
@@ -191,7 +191,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
             return deferred.promise;
         };
 
-        this.signin = function(user, authAction) {
+        this.signin = function (user, authAction) {
             var deferred = $q.defer();
 
             var authenticationData = {
@@ -217,7 +217,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
             try {
                 cognitoUser.authenticateUser(authenticationDetails, {
-                    onSuccess: function(result) {
+                    onSuccess: function (result) {
                         $localstorage.set('username', cognitoUser.getUsername());
                         deferred.resolve({
                             state: 'login_success',
@@ -225,17 +225,17 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
                         });
                     },
 
-                    onFailure: function(err) {
+                    onFailure: function (err) {
                         console.log(err);
                         deferred.reject(err);
                     },
-                    newPasswordRequired: function(userAttributes, requiredAttributes) {
+                    newPasswordRequired: function (userAttributes, requiredAttributes) {
                         if (authAction === 'password_challenge') {
                             cognitoUser.completeNewPasswordChallenge(user.newPassword, [], {
-                                onSuccess: function(result) {
+                                onSuccess: function (result) {
                                     deferred.resolve();
                                 },
-                                onFailure: function(err) {
+                                onFailure: function (err) {
                                     console.log(err);
                                     var _msg = err.message;
                                     deferred.reject(_msg);
@@ -261,7 +261,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
         };
 
-        this.signOut = function() {
+        this.signOut = function () {
 
             try {
                 var data = {
@@ -285,7 +285,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
         };
 
-        this.isAuthenticated = function() {
+        this.isAuthenticated = function () {
             var deferred = $q.defer();
             try {
                 var data = {
@@ -297,7 +297,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
                 var cognitoUser = userPool.getCurrentUser();
 
                 if (cognitoUser != null) {
-                    cognitoUser.getSession(function(err, session) {
+                    cognitoUser.getSession(function (err, session) {
                         if (err) {
                             deferred.resolve(false);
                         } else {
@@ -316,7 +316,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
         };
 
-        this.isAdminAuthenticated = function() {
+        this.isAdminAuthenticated = function () {
             var deferred = $q.defer();
             try {
                 var data = {
@@ -328,11 +328,11 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
                 var cognitoUser = userPool.getCurrentUser();
 
                 if (cognitoUser != null) {
-                    cognitoUser.getSession(function(err, session) {
+                    cognitoUser.getSession(function (err, session) {
                         if (err) {
                             deferred.resolve(false);
                         } else {
-                            cognitoUser.getUserAttributes(function(err, result) {
+                            cognitoUser.getUserAttributes(function (err, result) {
                                 if (err) {
                                     console.log(err);
                                     deferred.resolve(false);
@@ -365,7 +365,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
         };
 
-        this.logOut = function() {
+        this.logOut = function () {
 
             var data = {
                 UserPoolId: YOUR_USER_POOL_ID,
@@ -381,7 +381,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
         };
 
-        this.getUserAccessToken = function() {
+        this.getUserAccessToken = function () {
             var deferred = $q.defer();
 
             var data = {
@@ -395,7 +395,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
             if (cognitoUser != null) {
 
-                cognitoUser.getSession(function(err, session) {
+                cognitoUser.getSession(function (err, session) {
                     if (err) {
                         console.log(err);
                         deferred.reject(err);
@@ -411,7 +411,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
             return deferred.promise;
         };
 
-        this.getUserAccessTokenWithUsername = function() {
+        this.getUserAccessTokenWithUsername = function () {
             var deferred = $q.defer();
 
             var data = {
@@ -425,7 +425,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
             if (cognitoUser != null) {
 
-                cognitoUser.getSession(function(err, session) {
+                cognitoUser.getSession(function (err, session) {
                     if (err) {
                         console.log(err);
                         deferred.reject(err);
@@ -444,7 +444,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
             return deferred.promise;
         };
 
-        this.getUsername = function() {
+        this.getUsername = function () {
 
             var userinfo = {
                 email: '',
@@ -465,7 +465,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
         };
 
-        this.getUserInfo = function() {
+        this.getUserInfo = function () {
             var deferred = $q.defer();
 
             var userinfo = {
@@ -486,13 +486,13 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
 
             if (cognitoUser != null) {
 
-                cognitoUser.getSession(function(err, session) {
+                cognitoUser.getSession(function (err, session) {
                     if (err) {
                         console.log(err);
                         deferred.reject(err);
                     }
 
-                    cognitoUser.getUserAttributes(function(err, result) {
+                    cognitoUser.getUserAttributes(function (err, result) {
                         if (err) {
                             console.log(err);
                             deferred.reject(err);
