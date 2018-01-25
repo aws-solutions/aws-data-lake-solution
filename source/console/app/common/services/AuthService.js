@@ -23,7 +23,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
         this.signup = function(newuser) {
             var deferred = $q.defer();
 
-            newuser.username = newuser.email.replace('@', '_').replace(/\./g, '_');
+            newuser.username = newuser.email.replace('@', '_').replace(/\./g, '_').toLowerCase();
 
             var poolData = {
                 UserPoolId: YOUR_USER_POOL_ID,
@@ -74,7 +74,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
         this.newPassword = function(newuser) {
             var deferred = $q.defer();
 
-            newuser.username = newuser.email.replace('@', '_').replace(/\./g, '_');
+            newuser.username = newuser.email.replace('@', '_').replace(/\./g, '_').toLowerCase();
 
             var poolData = {
                 UserPoolId: YOUR_USER_POOL_ID,
@@ -96,7 +96,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
         this.forgot = function(user) {
             var deferred = $q.defer();
 
-            var _username = user.email.replace('@', '_').replace(/\./g, '_');
+            var _username = user.email.replace('@', '_').replace(/\./g, '_').toLowerCase();
             console.log(_username);
 
             var poolData = {
@@ -129,7 +129,7 @@ angular.module('dataLake.service.auth', ['dataLake.utils'])
         this.resetPassword = function(user) {
             var deferred = $q.defer();
 
-            var _username = user.email.replace('@', '_').replace(/\./g, '_');
+            var _username = user.email.replace('@', '_').replace(/\./g, '_').toLowerCase();
 
             var poolData = {
                 UserPoolId: YOUR_USER_POOL_ID,
