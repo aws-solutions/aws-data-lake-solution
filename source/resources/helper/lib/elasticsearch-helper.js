@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -51,8 +51,44 @@ let elasticsearchHelper = (function() {
             connectionClass: require('http-aws-es')
         });
 
+
         client.indices.create({
-            index: searchIndex
+            index: searchIndex,
+            body: {
+                "mappings": {
+                    "package" : {
+                        "properties" : {
+                            "created_at": {
+                                "type": "date"
+                            },
+                            "deleted": {
+                                "type": "boolean"
+                            },
+                            "description": {
+                                "type": "text"
+                            },
+                            "groups": {
+                                "type": "keyword",
+                                "ignore_above": 12800
+                            },
+                            "name": {
+                                "type": "text"
+                            },
+                            "owner": {
+                                "type": "keyword",
+                                "ignore_above": 128
+                            },
+                            "package_id": {
+                                "type": "keyword",
+                                "ignore_above": 128
+                            },
+                            "updated_at": {
+                                "type": "date"
+                            }
+                        }
+                    }
+                }
+            }
         }, function(err, resp) {
             if (err) {
                 console.log('The data lake elasticsearch cluster is down!');

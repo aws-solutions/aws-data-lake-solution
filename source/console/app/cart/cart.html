@@ -3,7 +3,7 @@
 <section class="awsui-util-mt-l" ng-show="showerror">
     <awsui-alert type="error">
       <span dom-region="header">Service error</span>
-      <span dom-region="content">An unexpected error has occured while retrieving users.</span>
+      <span dom-region="content">An unexpected error has occurred while retrieving users.</span>
     </awsui-alert>
 </section>
 <div class="clearfix">
@@ -82,7 +82,7 @@
         </div>
     </awsui-tabs>
 </section>
-<awsui-modal visible="showCheckoutModal" header="Manifest Type">
+<awsui-modal visible="showCheckoutModal" header="Manifest Type" dismiss="closeCheckoutModal()">
     <span dom-region="content">
         <p>Select the contents of your manifest file.</p>
         <awsui-radio-group ng-model="manifestType">

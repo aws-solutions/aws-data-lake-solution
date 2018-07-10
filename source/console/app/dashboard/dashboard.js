@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -37,12 +37,24 @@ angular.module('dataLake.dashboard', ['dataLake.main', 'dataLake.utils'])
     });
 }])
 
-.controller('DashboardCtrl', function($scope, $state, $localstorage) {
+.controller('DashboardCtrl', function($scope, $state, $localstorage, $blockUI, searchFactory) {
 
     $scope.showIntroModal = false;
     $scope.currentSlide = 0;
     $scope.slideTitle = 'Welcome to the Data Lake Solution';
     $scope.navText = 'Next';
+    $scope.ownedPackages = 0;
+    $scope.accessiblePackages = 0;
+
+    var loadStats = function() {
+        $blockUI.start();
+
+        searchFactory.stats(function(err, stats) {
+            $scope.ownedPackages = stats.owned_packages;
+            $scope.accessiblePackages = stats.accessible_packages;
+            $blockUI.stop();
+        });
+    };
 
     $scope.search = function(terms) {
         $state.go('search', {
@@ -76,4 +88,5 @@ angular.module('dataLake.dashboard', ['dataLake.main', 'dataLake.utils'])
         $scope.showIntroModal = true;
     }
 
+    loadStats();
 });

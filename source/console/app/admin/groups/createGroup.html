@@ -1,0 +1,23 @@
+<h1>Create a group</h1>
+<p>Create a new group by entering the group's name and description.</p>
+<section class="awsui-util-mt-l">
+    <awsui-alert type={{awsUiAlert.type}} ng-show="awsUiAlert.show">
+        <span dom-region="header">{{awsUiAlert.header}}</span>
+        <span dom-region="content">{{awsUiAlert.content}}<button class="awsui-alert-dismiss-control awsui-alert-times-{{awsUiAlert.type}} awsui-button-as-link awsui-icon" aria-label="close" type="button" ng-click="dismissAwsUiAlert()"></button></span>
+    </awsui-alert>
+    <form name="newGroupForm" novalidate ng-submit="createGroup(newGroup, newGroupForm.$valid)">
+        <awsui-control-group validation-message="{{ newGroupForm.name.$invalid && (newGroupForm.name.$touched || showFormErrors)? 'This field is required, does not accept spaces and accented characters.' : '' }}" label="Name">
+            <awsui-textfield name="name" ng-model="newGroup.name" required ng-pattern='/^[\w\d\~\!\@\#\$\^\&\*\(\)\_\{\}\|\:\<\>\?\-\=\[\]\\\;\,\.\/&quot;&apos;]+$/' data-disabled="false" ></awsui-textfield>
+        </awsui-control-group>
+        <awsui-control-group validation-message="{{ newGroupForm.description.$invalid && (newGroupForm.description.$touched || showFormErrors)? 'A valid description is required!' : '' }}" label="Description">
+            <awsui-textfield name="Description" ng-model="newGroup.description" data-disabled="false" ></awsui-textfield>
+        </awsui-control-group>
+        <h1></h1>
+        <awsui-control-group>
+            <div class="text-right">
+                <awsui-button text="Cancel" variant="link" href="#/admin/groups"></awsui-button>
+                <awsui-button variant="primary" type="submit" text="Create Group"></awsui-button>
+            </div>
+        </awsui-control-group>
+    </form>
+</section>

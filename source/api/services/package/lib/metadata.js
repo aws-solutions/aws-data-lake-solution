@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -88,7 +88,7 @@ let metadata = (function() {
     let metadata = function() {};
 
     /**
-     * Retrieves list of metadata associated with a data lake pacakge.
+     * Retrieves list of metadata associated with a data lake package.
      * @param {integer} packageId - ID of the package to retrieve metadata.
      * @param {getAllPackageMetadata~requestCallback} cb - The callback that handles the response.
      */
@@ -97,7 +97,7 @@ let metadata = (function() {
     };
 
     /**
-     * Retrieves the metadata governance associated with creating a data lake pacakge.
+     * Retrieves the metadata governance associated with creating a data lake package.
      * @param {JSON} request - Requested operation should equal 'required_metadata'.
      * @param {getMetadataGovernance~requestCallback} cb - The callback that handles the response.
      */
@@ -139,7 +139,7 @@ let metadata = (function() {
     };
 
     /**
-     * Creates metadata and associates with a data lake pacakge.
+     * Creates metadata and associates with a data lake package.
      * @param {integer} packageId - ID of the package to assocate metadata with.
      * @param {JSON} packageMetadata - Metadata object to add to package.
      * @param {string} token - Authorization header token of the request to pass to import process.
@@ -163,7 +163,7 @@ let metadata = (function() {
 
             if (!_.isEmpty(pckg)) {
                 //verify the requestor is the package owner or and admin to verify
-                //they can add metadata to the pacakge
+                //they can add metadata to the package
                 if (pckg.Item.owner == ticket.userid || ticket.role == 'Admin') {
                     // get the latest metadata entry
                     getLatestMetadataEntry(packageId, function(err, latest) {
@@ -275,7 +275,7 @@ let metadata = (function() {
     };
 
     /**
-     * Deletes metadata from a data lake pacakge.
+     * Deletes metadata from a data lake package.
      * @param {integer} packageId - ID of the package the metadata is associated with.
      * @param {integer} metadataId - ID of metadata to delete.
      * @param {JSON} ticket - Data lake authorization ticket.
@@ -298,7 +298,7 @@ let metadata = (function() {
 
             if (!_.isEmpty(pckg)) {
                 //verify the requestor is the package owner or and admin to verify
-                //they can add metadata to the pacakge
+                //they can add metadata to the package
                 if (pckg.Item.owner == ticket.userid || ticket.role == 'Admin') {
                     let params = {
                         TableName: ddbTable,
@@ -328,7 +328,7 @@ let metadata = (function() {
     };
 
     /**
-     * Retrieves metadata object associated with a data lake pacakge.
+     * Retrieves metadata object associated with a data lake package.
      * @param {integer} packageId - ID of the package the metadata is associated with.
      * @param {integer} metadataId - ID of metadata to retrieve.
      * @param {JSON} ticket - Data lake authorization ticket.
@@ -356,7 +356,7 @@ let metadata = (function() {
     };
 
     /**
-     * Helper function to retrieve all metadata associated with a data lake pacakge.
+     * Helper function to retrieve all metadata associated with a data lake package.
      * @param {integer} packageId - ID of the package the metadata is associated with.
      * @param {getMetadataForPackage~requestCallback} cb - The callback that handles the response.
      */
@@ -381,7 +381,7 @@ let metadata = (function() {
     };
 
     /**
-     * Helper function to retrieve the latest metadata record associated with a data lake pacakge.
+     * Helper function to retrieve the latest metadata record associated with a data lake package.
      * @param {integer} packageId - ID of the package the metadata is associated with.
      * @param {getLatestMetadataEntry~requestCallback} cb - The callback that handles the response.
      */

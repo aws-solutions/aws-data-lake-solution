@@ -1,0 +1,75 @@
+<awsui-breadcrumb-group>
+    <awsui-breadcrumb-item text="Groups" href="#admin/groups"></awsui-breadcrumb-item>
+    <awsui-breadcrumb-item text="{{group.GroupName}}" href="#admin/groups/{{group.GroupName}}"></awsui-breadcrumb-item>
+</awsui-breadcrumb-group>
+<h1>{{title}}</h1>
+<p>{{subtitle}}</p>
+<section class="awsui-util-mt-l">
+    <awsui-alert type={{awsUiAlert.type}} ng-show="awsUiAlert.show">
+        <span dom-region="header">{{awsUiAlert.header}}</span>
+        <span dom-region="content">{{awsUiAlert.content}}<button class="awsui-alert-dismiss-control awsui-alert-times-{{awsUiAlert.type}} awsui-button-as-link awsui-icon" aria-label="close" type="button" ng-click="dismissAwsUiAlert()"></button></span>
+    </awsui-alert>
+</section>
+<section class="awsui-util-mt-l" ng-cloak ng-show="group">
+    <form name="groupEditForm" novalidate ng-submit="modifyGroup(group, groupEditForm.$valid)">
+        <div class="awsui-util-mb-xl">
+            <awsui-button text="Cancel" href="#/admin/groups"></awsui-button>
+            <awsui-button variant="primary" text="Save" ng-click="updateGroup('update')"></awsui-button>
+            <awsui-button class="awsui-util-f-r" icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/admin-guide/working-with-groups"></awsui-button>
+        </div>
+        <div>
+            <awsui-control-group validation-message="" label="Name">
+                {{group.GroupName}}
+            </awsui-control-group>
+            <awsui-control-group validation-message="{{ groupEditForm.description.$invalid && groupEditForm.description.$touched ? 'A valid description is required!' : '' }}" label="Description">
+                <awsui-textfield name="Description" ng-model="group.Description" data-disabled="false" ></awsui-textfield>
+            </awsui-control-group>
+            <awsui-control-group label="Created">
+                {{group.CreationDate | moment:"MMM Do YYYY, h:mm:ss a"}}
+            </awsui-control-group>
+            <awsui-control-group label="Last Updated">
+                {{group.LastModifiedDate | moment:"MMM Do YYYY, h:mm:ss a"}}
+            </awsui-control-group>
+        </div>
+    </form>
+</section>
+<section class="awsui-util-mt-l" ng-show="group.UserList.length > 0">
+    <table class="grid">
+        <thead>
+            <th></th>
+            <th>Email</th>
+            <th>Name</th>
+            <th>Role</th>
+            <th>Enabled</th>
+            <th>Registration Status</th>
+        </thead>
+        <tbody>
+            <tr ng-repeat="user in group.UserList">
+                <td style="width:25px;">
+                    <awsui-button icon="times-circle" text="" variant="standalone-icon"
+                                  label="remove" ng-click="removeUserFromGroup(user.user_id)"></awsui-button>
+                </td>
+                <td><a href="#admin/users/{{user.user_id}}">{{user.email}}</a></td>
+                <td>{{user.name}}</td>
+                <td>{{user.role}}</td>
+                <td>
+                    <awsui-label label="True" type="success" ng-show="user.enabled"></awsui-label>
+                    <awsui-label label="False" type="disabled" ng-show="!user.enabled"></awsui-label>
+                </td>
+                <td><span class="{{user.status == 'CONFIRMED' ? 'awsui-status-positive' : 'awsui-status-warning'}}">{{user.status == 'CONFIRMED' ? 'Confirmed' : 'Pending'}}</span></td>
+            </tr>
+        </tbody>
+    </table>
+</section>
+<awsui-expandable-section class="awsui-util-mt-l" header="Delete Group" ng-show="group.UserList.length == 0">
+    <awsui-button class="awsui-util-mt-m" variant="danger" text="Delete" ng-click="removeGroup()"></awsui-button>
+</awsui-expandable-section>
+<awsui-modal visible="showDeleteModal" header="Delete group" dismiss="closeDeleteModal()">
+    <span dom-region="content">
+        <p>You are about to <b class="awsui-status-negative">delete</b> the group {{group.GroupName}}, all packages visible to only this group should be updated later. Do you want to proceed?</p>
+    </span>
+    <span dom-region="footer">
+        <awsui-button text="Delete" variant="danger" class="awsui-util-f-r" ng-click="deleteGroup()"></awsui-button>
+        <awsui-button text="Cancel" variant="link" class="awsui-util-f-r" ng-click="closeDeleteModal()"></awsui-button>
+    </span>
+</awsui-modal>

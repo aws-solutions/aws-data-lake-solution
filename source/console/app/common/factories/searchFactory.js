@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -35,6 +35,18 @@ angular.module('dataLake.factory.search', ['ngResource', 'dataLake.service.auth'
         });
     };
 
+    var statsResource = function(token) {
+        var _url = [APIG_ENDPOINT, '/search/stats'].join('');
+        return $resource(_url, {}, {
+            query: {
+                method: 'GET',
+                headers: {
+                    Auth: token
+                }
+            }
+        });
+    };
+
     factory.search = function(terms, cb) {
 
         authService.getUserAccessToken().then(function(token) {
@@ -44,6 +56,25 @@ angular.module('dataLake.factory.search', ['ngResource', 'dataLake.service.auth'
             }, function(data) {
                 return cb(null, data.Items);
             }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+
+    factory.stats = function(cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            statsResource(_token).query({
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                console.log(err);
                 return cb(err, null);
             });
         }, function(msg) {

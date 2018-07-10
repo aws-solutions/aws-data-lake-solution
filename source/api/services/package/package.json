@@ -8,27 +8,28 @@
     "version": "0.0.1",
     "private": "true",
     "dependencies": {
-        "aws-sdk": "*",
         "moment": "*",
         "underscore": "*",
         "jsonschema": "*",
-        "shortid": "*"
+        "shortid": "*",
+        "uuid": "*",
+        "access-validator": "file:../../../resources/access-validator/"
     },
     "devDependencies": {
+        "aws-sdk-mock": "*",
+        "chai": "*",
+        "chai-things": "^0.2.0",
         "grunt": "^0.4.5",
         "grunt-aws-lambda": "^0.13.0",
-        "grunt-pack": "0.1.*",
         "grunt-contrib-clean": "*",
-        "chai": "*",
-        "sinon": "*",
-        "sinon-chai": "*",
+        "grunt-pack": "0.1.*",
         "mocha": "*",
-        "aws-sdk-mock": "*",
-        "npm-run-all": "*"
+        "npm-run-all": "*",
+        "sinon": "^4.5.0",
+        "sinon-chai": "*"
     },
     "scripts": {
-        "pretest": "npm install",
-        "test": "mocha lib/*.spec.js",
+        "test": "NODE_PATH=./node_modules mocha lib/*.spec.js",
         "build-init": "rm -rf dist && rm -f archive.zip && mkdir dist && mkdir dist/lib",
         "build:copy": "cp index.js dist/ && cp -r lib/*.js dist/lib",
         "build:install": "cp package.json dist/ && cd dist && npm install --production",

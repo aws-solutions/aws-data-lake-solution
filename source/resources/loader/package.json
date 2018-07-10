@@ -1,0 +1,20 @@
+{
+    "name": "loader",
+    "description": "Data Lake test harness loader",
+    "main": "index.js",
+    "author": {
+        "name": "aws-solutions-builder"
+    },
+    "version": "0.0.1",
+    "private": "true",
+    "dependencies": {
+        "js-base64": "*",
+        "moment": "*",
+        "async": "*"
+    },
+    "bundledDependencies": [
+        "moment",
+        "js-base64",
+        "async"
+    ]
+}

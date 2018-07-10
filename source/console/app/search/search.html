@@ -3,9 +3,16 @@
     <awsui-button class="awsui-util-f-r" icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/user-guide/searching-in-data-lake"></awsui-button>
 </h1>
 <p>Search the data lake to discover and access data relevant to your business needs. Begin by entering a search term browse the available datasets.</p>
+
+<awsui-alert type={{awsUiAlert.type}} ng-show="awsUiAlert.show">
+    <span dom-region="header">{{awsUiAlert.header}}</span>
+    <span dom-region="content">{{awsUiAlert.content}}<button class="awsui-alert-dismiss-control awsui-alert-times-{{awsUiAlert.type}} awsui-button-as-link awsui-icon" aria-label="close" type="button" ng-click="dismissAwsUiAlert()"></button></span>
+</awsui-alert>
+
+
 <awsui-alert type="error" ng-show="showSearchError">
     <span dom-region="header">Service Error </span>
-    <span dom-region="content">An unexpected error occured when searching the data lake repository.</span>
+    <span dom-region="content">An unexpected error occurred when searching the data lake repository.</span>
 </awsui-alert>
 <form class="clearfix awsui-util-mt-l" name="searchForm" novalidate ng-submit="search(search.terms)">
     <div class="c-m-2 c-m-push-10">
@@ -15,28 +22,58 @@
         <awsui-textfield name="search" ng-model="search.terms" class="no-gutter" ng-required data-disabled="false" placeholder="Enter search term..."></awsui-textfield>
     </div>
 </form>
-<section class="awsui-util-mt-l" ng-show="no_results && searchString">
+
+<section class="awsui-util-mt-l" ng-show="searchString.trim().length > 0 && (!results || results.length == 0)">
     <label>No results found for search term(s) <awsui-label label="{{searchString}}" type="disabled"></awsui-label>.</label>
 </section>
-<section class="awsui-util-mt-l" ng-show="!no_results && searchString">
+
+<section class="awsui-util-mt-l" ng-show="results && results.length > 0">
     <div class="awsui-util-mb-s">
         <label>Search for <awsui-label label="{{searchString}}" type="info"></awsui-label> resulted in <awsui-label label="{{results.length}}" type="info"></awsui-label> hit(s)</label>
     </div>
-    <div class="awsui-util-mb-l" ng-repeat="res in results">
-        <h3 class="search-result-title" ng-bind-html='trustSnippet(res.name)'></h3>
-        <table>
-            <tr>
-                <td style="width:40px;">
-                    <awsui-button icon="pencil" text="View Package" form-action="none"
-                                 href="#package/{{res.package_id}}" variant="standalone-icon"></awsui-button>
+    <table class="grid">
+        <thead>
+            <th>Cart</th>
+            <th>Edit</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Created At</th>
+            <th>Last Updated At</th>
+            <th>Delete</th>
+        </thead>
+        <div >
+            <tr ng-repeat="res in results">
+                <td style="width:25px;">
+                    <awsui-checkbox ng-model="res.cart_flag"
+                                    title="{{res.cart_flag ? 'Remove from cart' : 'Add to cart'}}"
+                                    ng-change="toggleCart(res)"></awsui-checkbox>
                 </td>
-                <td>
-                    <div class="search-result" ng-bind-html='trustSnippet(res.description)'></div>
-                    <!-- <div ng-repeat="meta in res._source.metadata[0].metadata">
-                        <awsui-label type="info" label="{{meta.tag}}"></awsui-label> {{meta.value}}
-                    </div> -->
+                <td style="width:25px;">
+                    <awsui-button icon="pencil" text="" variant="standalone-icon"
+                                  label="Edit Package" title="Edit Package"
+                                  href="#package/{{res.package_id}}"></awsui-button>
+                </td>
+                <td>{{res.name}}</td>
+                <td>{{res.description}}</td>
+                <td>{{res.created_at_pretty}}</td>
+                <td>{{res.updated_at_pretty}}</td>
+                <td style="width:25px;">
+                    <awsui-button icon="times" text="" variant="standalone-icon"
+                                  label="Delete Package" title="Delete Package"
+                                  ng-click="deletePackage(res.package_id, res.name)"></awsui-button>
                 </td>
             </tr>
-        </table>
-    </div>
+        </div>
+    </table>
 </section>
+
+<awsui-modal visible="deleteModal.show" header="Delete" dismiss="closeDeleteModal()">
+    <span dom-region="content" ng-if="deleteModal.type == 'package'">
+        <p>Deleting this <b>'{{deleteModal.name}}' package</b> <b class="awsui-status-negative">will remove</b> the entry from the data lake and <b class="awsui-status-negative">delete</b> the dataset files from Amazon S3. Note that if you have an AWS Glue crawler running, it will not be deleted, and must be deleted manually.</p>
+        <p><b>Do you want to proceed?</b></p>
+    </span>
+    <span dom-region="footer">
+        <awsui-button text="Delete" variant="danger" class="awsui-util-f-r" ng-click="confirmDeleteModal()"></awsui-button>
+        <awsui-button text="Cancel" variant="link" class="awsui-util-f-r" ng-click="closeDeleteModal()"></awsui-button>
+    </span>
+</awsui-modal>

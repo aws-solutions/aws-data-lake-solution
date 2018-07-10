@@ -5,9 +5,9 @@
     </h1>
     <p>Create a data lake package to store and share your dataset. Begin by typing a package name and a description for your dataset.</p>
     <section class="awsui-util-mt-l">
-        <awsui-alert type="error" ng-show="showCreateError" dismiss="showCreateError=false">
-            <span dom-region="header">Service Error </span>
-            <span dom-region="content">{{createErrorMessage}}</span>
+        <awsui-alert type={{awsUiAlert.type}} ng-show="awsUiAlert.show">
+            <span dom-region="header">{{awsUiAlert.header}}</span>
+            <span dom-region="content">{{awsUiAlert.content}}<button class="awsui-alert-dismiss-control awsui-alert-times-{{awsUiAlert.type}} awsui-button-as-link awsui-icon" aria-label="close" type="button" ng-click="dismissAwsUiAlert()"></button></span>
         </awsui-alert>
         <form name="newPackageForm" novalidate ng-submit="createPackage(newpackage, newPackageForm.$valid)">
             <awsui-control-group validation-message="{{ newPackageForm.name.$touched && newPackageForm.name.$invalid ? 'Name is required!' : '' }}" label="Package Name*">
@@ -15,6 +15,10 @@
             </awsui-control-group>
             <awsui-control-group validation-message="{{ newPackageForm.description.$touched && newPackageForm.description.$invalid ? 'Description is required!' : '' }}" label="Description*">
                 <awsui-textarea rows="8" name="description" data-disabled="false" required ng-model="newpackage.description" placeholder="1000 character limit"></awsui-textarea>
+            </awsui-control-group>
+            <awsui-control-group validation-message="" label="Visibility">
+                <awsui-checkbox ng-model="groups['all']" label="All"></awsui-checkbox>
+                <awsui-checkbox ng-repeat="group in groups['groups']" ng-model="group.visible" checked="groups['all'] ? true : group.visible" disabled="groups['all'] ? 'disabled' : ''" label="{{group.name}}"></awsui-checkbox>
             </awsui-control-group>
             <div ng-repeat="item in metadataGovernance">
                 <awsui-control-group validation-message="" label="{{item.governance === 'Required' ? item.tag + '*' : item.tag}}">
@@ -38,19 +42,19 @@
     <h1>Data Lake Package</h1>
     <p>Manage the data lake package. Create and edit package details, metadata or dataset files.</p>
     <section class="awsui-util-mt-l">
-        <awsui-alert type="error" ng-show="showError" dismiss="showError=false">
-            <span dom-region="header">Service Error </span>
-            <span dom-region="content">{{errorMessage}}</span>
+        <awsui-alert type={{awsUiAlert.type}} ng-show="awsUiAlert.show">
+            <span dom-region="header">{{awsUiAlert.header}}</span>
+            <span dom-region="content">{{awsUiAlert.content}}<button class="awsui-alert-dismiss-control awsui-alert-times-{{awsUiAlert.type}} awsui-button-as-link awsui-icon" aria-label="close" type="button" ng-click="dismissAwsUiAlert()" ng-show="!awsUiAlert.criticalError"></button></span>
         </awsui-alert>
-        <form name="packageForm" ng-show="pckg" novalidate>
+        <awsui-button-group class="awsui-util-f-r">
+            <awsui-button icon="refresh" ng-click="refresh()"></awsui-button>
+            <awsui-button icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/index.html"></awsui-button>
+        </awsui-button-group>
+        <form name="packageForm" ng-show="pckg && !awsUiAlert.criticalError" novalidate>
             <div class="awsui-util-mb-xl">
                 <awsui-button text="Cancel" href="#/dashboard"></awsui-button>
                 <awsui-button variant="primary" text="Save" ng-click="updatePackage(pckg, packageForm.$valid)" ng-show="canEdit"></awsui-button>
-                <awsui-button text="Add to cart" ng-click="addToCart(pckg)"></awsui-button>
-                <awsui-button-group class="awsui-util-f-r">
-                    <awsui-button icon="refresh" ng-click="refresh()"></awsui-button>
-                    <awsui-button icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/index.html"></awsui-button>
-                </awsui-button-group>
+                <awsui-button text="Add to cart" ng-click="addToCart(pckg.package_id)"></awsui-button>
             </div>
             <awsui-tabs tabs="tabs" ng-model="currentTab">
                 <div ng-switch="currentTab">
@@ -61,11 +65,17 @@
                                 <awsui-control-group label="Package ID">{{pckg.package_id}}</awsui-control-group>
                                 <awsui-control-group validation-message="{{ packageForm.name.$touched && packageForm.name.$invalid ? 'Name is required!' : '' }}" label="Package Name*">
                                     <awsui-textfield name="name" ng-model="pckg.name" required data-disabled="false" placeholder="100 character limit"></awsui-textfield>
+                                    <awsui-label type="warning" ng-show="pckg.name && pckgName.trim() != pckg.name.trim()" label="Integration components will be reprocessed when changing the package name."></awsui-label>
                                 </awsui-control-group>
                                 <awsui-control-group validation-message="" label="Description">
                                     <awsui-textarea rows="8" name="description" data-disabled="false" ng-model="pckg.description" placeholder="1000 character limit"></awsui-textarea>
                                 </awsui-control-group>
+                                <awsui-control-group validation-message="" label="Visibility">
+                                    <awsui-checkbox ng-model="groups['all']" label="All" disabled="(!canEdit) ? 'disabled' : ''"></awsui-checkbox>
+                                    <awsui-checkbox ng-repeat="group in groups['groups']" ng-model="group.visible" checked="groups['all'] ? true : group.visible" disabled="(groups['all'] || !canEdit) ? 'disabled' : ''" label="{{group.name}}"></awsui-checkbox>
+                                </awsui-control-group>
                             </div>
+
                             <h2 class="awsui-util-mt-xl">Metadata</h2>
                             <div class="center-text" ng-show="pckgMetadata.metadata.length == 0">
                                 <label>No metadata currently associated.</label>
@@ -110,7 +120,7 @@
                                     <td>
                                         <awsui-button icon="times" text="" form-action="submit" variant="standalone-icon"
                                                       label="remove"
-                                                      ng-click="removeMetadata($index)"></awsui-button>
+                                                      ng-click="removeMetadata($index)" ng-show="canEdit"></awsui-button>
                                     </td>
                                 </tr>
 
@@ -118,7 +128,7 @@
                             <awsui-button icon="plus-circle" ng-click="addMetadata()" text="Add Metadata" variant="link" ng-show="canEdit"></awsui-button>
                         </section>
                         <awsui-expandable-section class="awsui-util-mt-l" header="Remove the package" ng-show="canEdit">
-                            <awsui-button class="awsui-util-mt-m" variant="danger"  text="Delete Package" ng-click="removePackage()"></awsui-button>
+                            <awsui-button class="awsui-util-mt-m" variant="danger"  text="Delete Package" ng-click="deletePackage(pckg.package_id)"></awsui-button>
                         </awsui-expandable-section>
                     </div>
                     <div ng-switch-when="tab_content">
@@ -140,7 +150,10 @@
                                     <td>{{c.dataset_id}}</td>
                                     <td>
                                         {{c.name}}
-                                        <awsui-tooltip position="right" text="s3://{{c.s3_bucket}}/{{c.s3_key}}">
+                                        <awsui-tooltip ng-if="c.content_type != 'include-path'" position="right"text="s3://{{c.s3_bucket}}/{{c.s3_key}}">
+                                            <i class="awsui-icon info-circle"></i>
+                                        </awsui-tooltip>
+                                        <awsui-tooltip ng-if="c.content_type == 'include-path' && c.excludePatterns.length > 0" position="right" text="Exclude Patterns: {{c.excludePatterns}}">
                                             <i class="awsui-icon info-circle"></i>
                                         </awsui-tooltip>
                                     </td>
@@ -150,7 +163,8 @@
                                     <td>
                                         <awsui-button icon="times" text="" variant="standalone-icon"
                                                       label="remove"
-                                                      ng-click="removeDataset(c.dataset_id)"></awsui-button>
+                                                      ng-click="deleteDataset(c.dataset_id, c.content_type)"
+                                                      ng-show="canEdit"></awsui-button>
                                     </td>
                                 </tr>
                             </table>
@@ -207,16 +221,18 @@
                                     </td>
                                     <td>{{c.owner}}</td>
                                     <td>{{c.created_at | date:'medium'}}</td>
-                                    <td><span class="{{c.state_desc == 'Processed' ? 'awsui-status-positive' : 'awsui-status-warning'}}">{{c.state_desc}}</span></td>
+                                    <td>
+                                        <span class="{{c.state_desc == 'Processed' ? 'awsui-status-positive' : 'awsui-status-warning'}}">{{c.state_desc}}</span>
+                                    </td>
                                     <td>
                                         <awsui-button icon="times" text="" variant="standalone-icon"
                                                       label="remove"
-                                                      ng-click="removeDataset(c.dataset_id)"></awsui-button>
+                                                      ng-click="deleteManifest(c.dataset_id)"></awsui-button>
                                     </td>
                                 </tr>
                             </table>
                         </section>
-                        <section ng-if="pckgManifest.length == 0" class="awsui-util-mt-l">
+                        <section class="awsui-util-mt-l">
                             <table ng-show="newLink.length > 0">
                                 <th>
                                     Manifest File
@@ -266,15 +282,89 @@
                             </div>
                         </div>
                     </div>
+                    <div ng-switch-when="tab_integrations">
+                        <h2>Crawler</h2>
+                        <awsui-alert ng-if="pckgManifest.length != 0 && pckgContent.length > 0" dismissible="false" header="Important">
+                            <b>data-lake-packages-role</b> and <b>data-lake-package-crawler-role</b> must provide access to your Amazon S3 imported datasets.
+                            <a href="http://docs.awssolutionsbuilder.com/data-lake/user-guide/working-with-packages/" target="_blank">Learn more.</a>
+                        </awsui-alert>
+                        <div class="center-text" ng-show="pckgContent.length == 0">
+                            <label>No content available to be crawled.</label>
+                        </div>
+                        <div style="max-width:900px" ng-show="pckgContent.length > 0">
+                            <awsui-control-group label="Name">{{glueCrawler.name}}</awsui-control-group>
+                            <awsui-control-group label="Status"><span class="{{glueCrawler.status === 'READY' ? 'awsui-status-positive' : 'awsui-status-warning'}}">{{glueCrawler.status}}</span></awsui-control-group>
+                            <awsui-control-group label="Last Run">{{glueCrawler.lastRun}}</awsui-control-group>
+                            <div class="text-center">
+                            <awsui-button text="Update" ng-click="updateOrCreateCrawler(pckg.package_id)" ng-show="canEdit" data-disabled="processing" ></awsui-button>
+                            <awsui-button text="{{processing ? 'Running' : 'Run Now'}}" variant="primary" ng-click="startCrawler(pckg.package_id)" ng-show="canEdit" loading="processing"></awsui-button>
+                            </div>
+                        </div>
+
+                        <h2>Tables</h2>
+                        <div class="center-text" ng-show="glueTables.length == 0 || pckgContent.length == 0">
+                            <label>No table available. Wait for the next crawler execution.</label>
+                        </div>
+                        <table class="grid">
+                            <tbody ng-show="glueTables.length > 0 && pckgContent.length > 0">
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Classification</th>
+                                    <th>Last Update</th>
+                                    <th>View Data</th>
+                                </tr>
+                                <tr ng-repeat="item in glueTables">
+                                    <td style="padding-bottom:20px; padding-top:20px;">
+                                        <div>
+                                            <b>{{item.TableName}}</b>
+                                            <awsui-button icon="external-link" text="" variant="standalone-icon" label="View in AWS Glue Console" ng-click="viewTable(item.ViewTableUrl)"></awsui-button>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <span class="">
+                                            {{item.Classification}}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <span class="">
+                                            {{item.LastUpdate}}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td style="padding-bottom:20px; padding-top:20px;">
+                                        <div>
+                                            <awsui-button icon="external-link" text="" variant="standalone-icon" label="View in Amazon Athena Console" ng-click="viewTableData(pckg.package_id, item.TableName)"></awsui-button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </awsui-tabs>
         </form>
-        <awsui-modal visible="showDeleteModal" header="Delete package">
-            <span dom-region="content">
-                <p>You are about to <b class="awsui-status-negative">delete</b> the package, this will remove the package entry from the data lake. It <b>will not delete</b> the dataset files from Amazon S3. Do you want to proceed?</p>
+        <awsui-modal visible="deleteModal.show" header="Delete" dismiss="closeDeleteModal()">
+            <span dom-region="content" ng-if="deleteModal.type == 'package'">
+                <p>Deleting this <b>package</b> <b class="awsui-status-negative">will remove</b> the entry from the data lake and <b class="awsui-status-negative">delete</b> the dataset files from Amazon S3. Note that if you have an AWS Glue crawler running, it will not be deleted, and must be deleted manually.</p>
+                <p><b>Do you want to proceed?</b></p>
+            </span>
+            <span dom-region="content" ng-if="deleteModal.type == 'manifest'">
+                <p>Deleting this <b>manifest</b> <b class="awsui-status-negative">will remove</b> all the entries related to this file from the data lake. Note that if you have an AWS Glue crawler running, it will not be deleted, and must be deleted manually.</p>
+                <p><b>Do you want to proceed?</b></p>
+            </span>
+            <span dom-region="content" ng-if="deleteModal.type == 'dataset'">
+                <p>Deleting this <b>dataset</b> <b class="awsui-status-negative">will remove</b> the entry from the data lake and <b class="awsui-status-negative">delete</b> its file from Amazon S3.</p>
+                <p><b>Do you want to proceed?</b></p>
+            </span>
+            <span dom-region="content" ng-if="deleteModal.type == 'include-path'">
+                <p>Deleting this <b>include-path</b> <b class="awsui-status-negative">will remove</b> the entry from the data lake. Note that if you have an AWS Glue crawler running, it will not be deleted, and must be deleted manually.</p>
+                <p><b>Do you want to proceed?</b></p>
             </span>
             <span dom-region="footer">
-                <awsui-button text="Delete" variant="danger" class="awsui-util-f-r" ng-click="deletePackage(pckg.package_id)"></awsui-button>
+                <awsui-button text="Delete" variant="danger" class="awsui-util-f-r" ng-click="confirmDeleteModal()"></awsui-button>
                 <awsui-button text="Cancel" variant="link" class="awsui-util-f-r" ng-click="closeDeleteModal()"></awsui-button>
             </span>
         </awsui-modal>

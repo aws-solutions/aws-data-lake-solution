@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -46,14 +46,21 @@ angular.module('dataLake.profile', ['dataLake.main', 'dataLake.utils', 'dataLake
     $scope.profile = {};
     $scope.secret = '';
 
+    $scope.awsUiAlert = {}
+    $scope.awsUiAlert.show = false;
+    $scope.awsUiAlert.criticalError = false;
+    $scope.awsUiAlert.type = "";
+    $scope.awsUiAlert.header = "";
+    $scope.awsUiAlert.content = "";
+
     var getUserDetails = function() {
         $blockUI.start();
+        $scope.dismissAwsUiAlert();
 
         authService.getUserInfo().then(function(result) {
             profileFactory.getProfile(function(err, profile) {
                 if (err) {
-                    console.log('error', err);
-                    $blockUI.stop();
+                    showErrorAlert(err.data.message, true);
                     return;
                 }
 
@@ -91,6 +98,32 @@ angular.module('dataLake.profile', ['dataLake.main', 'dataLake.utils', 'dataLake
             $blockUI.stop();
         });
 
+    };
+
+    $scope.dismissAwsUiAlert = function() {
+        $scope.awsUiAlert.show = false;
+        $scope.awsUiAlert.criticalError = false;
+        $scope.awsUiAlert.type = "";
+        $scope.awsUiAlert.header = "";
+        $scope.awsUiAlert.content = "";
+    };
+
+    var showSuccessAlert = function(message) {
+        $scope.awsUiAlert.type = "success";
+        $scope.awsUiAlert.header = "Success";
+        $scope.awsUiAlert.content = message;
+        $scope.awsUiAlert.show = true;
+        $scope.awsUiAlert.criticalError = false;
+        $blockUI.stop();
+    };
+
+    var showErrorAlert = function(message, critical = false) {
+        $scope.awsUiAlert.type = "error";
+        $scope.awsUiAlert.header = "Error";
+        $scope.awsUiAlert.content = message;
+        $scope.awsUiAlert.show = true;
+        $scope.awsUiAlert.criticalError = critical;
+        $blockUI.stop();
     };
 
     getUserDetails();

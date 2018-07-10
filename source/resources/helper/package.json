@@ -8,13 +8,13 @@
     "version": "0.0.1",
     "private": "true",
     "dependencies": {
-        "elasticsearch": "*",
-        "http-aws-es": "2.0.4",
-        "aws-sdk": "*",
+        "elasticsearch": "^14.2.2",
+        "http-aws-es": "^4.0.0",
         "moment": "*",
         "underscore": "*",
         "password-generator": "*",
-        "node-uuid": "*"
+        "uuid": "*",
+        "mime-types": "*"
     },
     "devDependencies": {
         "grunt": "^0.4.5",
@@ -22,14 +22,13 @@
         "grunt-pack": "0.1.*",
         "grunt-contrib-clean": "*",
         "chai": "*",
-        "sinon": "*",
+        "sinon": "^2.4.1",
         "sinon-chai": "*",
         "mocha": "*",
         "aws-sdk-mock": "*",
         "npm-run-all": "*"
     },
     "scripts": {
-        "pretest": "npm install",
         "test": "mocha lib/*.spec.js",
         "build-init": "rm -rf dist && rm -f archive.zip && mkdir dist && mkdir dist/lib",
         "build:copy": "cp index.js dist/ && cp -r lib/*.js dist/lib",
@@ -43,6 +42,6 @@
         "moment",
         "underscore",
         "password-generator",
-        "node-uuid"
+        "uuid"
     ]
 }

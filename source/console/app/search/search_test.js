@@ -49,9 +49,12 @@ describe('dataLake.search module', function() {
         });
 
         it('should return results when searching', function() {
+            // Use `moment` here as result is dependent on local timezone
+            var name = ['test package', '[', moment('2016-11-01T12:00:00Z').format('M/D/YYYY hh:mm:ss A'), ']'].join(' ');
+
             $scope.search('myterm');
             expect($scope.results[0]).toEqual({
-                name: 'test package [ 11/1/2016 08:00:00 AM ]',
+                name: name,
                 description: 'description for test item',
                 updated_at: '2016-11-01T12:00:00Z'
             });

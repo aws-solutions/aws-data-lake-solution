@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -23,6 +23,7 @@
 let AWS = require('aws-sdk');
 let Profile = require('./profile.js');
 let AccessLog = require('./access-log.js');
+let AccessValidator = require('access-validator');
 const servicename = 'data-lake-profile-service';
 
 /**
@@ -33,16 +34,8 @@ const servicename = 'data-lake-profile-service';
  */
 module.exports.respond = function(event, cb) {
 
-    // 2017-02-18: hotfix to accomodate API Gateway header transformations
-    let _authToken = '';
-    if (event.headers.Auth) {
-        console.log(['Header token post transformation:', 'Auth'].join(' '));
-        _authToken = event.headers.Auth;
-    } else if (event.headers.auth) {
-        console.log(['Header token post transformation:', 'auth'].join(' '));
-        _authToken = event.headers.auth;
-    }
-
+    let _accessValidator = new AccessValidator();
+    let _authToken = _accessValidator.getAuthToken(event.headers);
     let _authCheckPayload = {
         authcheck: ['Admin', 'Member'],
         authorizationToken: _authToken
@@ -62,7 +55,9 @@ module.exports.respond = function(event, cb) {
     lambda.invoke(params, function(err, data) {
         if (err) {
             console.log(err);
-            _response = buildOutput(500, err);
+            _response = buildOutput(500,
+                {code: 500, message: "An unexpected error occured when attempting to validade user permission."}
+            );
             return cb(_response, null);
         }
 
@@ -70,17 +65,12 @@ module.exports.respond = function(event, cb) {
         console.log('Authorization check result:' + _ticket.auth_status);
         if (_ticket.auth_status === 'authorized') {
             processRequest(event, _ticket, cb);
+
         } else {
-            logAccessEvent(event.requestContext.requestId, ticket.userid, 'access user profile',
-                'failed/unauthorized',
-                function(err, resp) {
-                    _response = buildOutput(401, {
-                        error: {
-                            message: 'User is not authorized to perform the requested action.'
-                        }
-                    });
-                    return cb(_response, null);
-                });
+            _response = buildOutput(401,
+                {code: 401, message: "User is not authorized to perform the requested action."}
+            );
+            return cb(_response, null);
         }
     });
 };
@@ -92,10 +82,6 @@ module.exports.respond = function(event, cb) {
  * @param {processRequest~requestCallback} cb - The callback that handles the response.
  */
 function processRequest(event, ticket, cb) {
-
-    let INVALID_PATH_ERR = {
-        Error: ['Invalid path request ', event.resource, ', ', event.httpMethod].join('')
-    };
 
     let _profile = new Profile();
     let _accessLog = new AccessLog();
@@ -111,44 +97,52 @@ function processRequest(event, ticket, cb) {
         _operation = 'retrieve user profile information';
         _profile.getProfile(ticket, function(err, data) {
             if (err) {
-                console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
+                        if (err) console.log(err);
                         return cb(_response, null);
                     });
+
             } else {
                 _response = buildOutput(200, data);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'success',
                     function(err, resp) {
+                        if (err) console.log(err);
                         return cb(null, _response);
                     });
             }
         });
+
     } else if (event.resource === '/profile/apikey' && event.httpMethod === 'GET') {
         _operation = 'generating a new secret access key';
         _profile.createApiKey(ticket, function(err, data) {
             if (err) {
-                console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
+                        if (err) console.log(err);
                         return cb(_response, null);
                     });
+
             } else {
                 _response = buildOutput(200, data);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'success',
                     function(err, resp) {
+                        if (err) console.log(err);
                         return cb(null, _response);
                     });
             }
         });
+
     } else {
-        _response = buildOutput(500, INVALID_PATH_ERR);
+        _response = buildOutput(500,
+            {code: 500, message: `Invalid path request ${event.resource}, ${event.httpMethod}`}
+        );
         return cb(_response, null);
     }
 

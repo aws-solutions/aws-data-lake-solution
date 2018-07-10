@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -51,6 +51,231 @@ angular.module('dataLake.factory.admin', ['ngResource', 'dataLake.utils', 'dataL
             console.log('Unable to retrieve the user session.');
             $state.go('signin', {});
         });
+    };
+
+    return factory;
+
+})
+
+.factory('adminGroupFactory', function($resource, $_, $state, authService) {
+
+    var factory = {};
+
+    var groupsResource = function(token) {
+        var _url = [APIG_ENDPOINT, 'admin/groups'].join('/');
+        return $resource(_url, {}, {
+            listGroups: {
+                method: 'GET',
+                headers: {
+                    Auth: token
+                }
+            }
+        });
+    };
+
+    var groupResource = function(token) {
+        var _url = [APIG_ENDPOINT, 'admin/groups/:groupName'].join('/');
+        return $resource(_url, {
+            groupName: '@groupName'
+        }, {
+            getGroup: {
+                method: 'GET',
+                headers: {
+                    Auth: token
+                }
+            },
+            createGroup: {
+                method: 'PUT',
+                headers: {
+                    Auth: token
+                }
+            },
+            updateGroup: {
+                method: 'POST',
+                headers: {
+                    Auth: token
+                }
+            },
+            deleteGroup: {
+                method: 'DELETE',
+                headers: {
+                    Auth: token
+                }
+            }
+        });
+    };
+
+    var userGroupResource = function(token) {
+        var _url = [APIG_ENDPOINT, 'admin/groups/membership/:userId'].join('/');
+        return $resource(_url, {
+            userId: '@userId'
+        }, {
+            getUserGroups: {
+                method: 'GET',
+                headers: {
+                    Auth: token
+                }
+            },
+            updateUserMembership: {
+                method: 'POST',
+                headers: {
+                    Auth: token
+                }
+            }
+        });
+    };
+
+    factory.listGroups = function(cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            groupsResource(_token).listGroups({
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    factory.createGroup = function(groupName, description, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            groupResource(_token).createGroup({
+                groupName: groupName
+            },{
+                description: description
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    factory.updateGroup = function(groupName, description, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            groupResource(_token).updateGroup({
+                groupName: groupName
+            },{
+                action: 'updateGroup',
+                description: description
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    factory.removeUserFromGroup = function(userId, groupName, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            groupResource(_token).updateGroup({
+                groupName: groupName
+            },{
+                action: 'removeUserFromGroup',
+                userId: userId
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    factory.getGroup = function(groupName, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            groupResource(_token).getGroup({
+                groupName: groupName
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    factory.deleteGroup = function(groupName, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            groupResource(_token).deleteGroup({
+                groupName: groupName
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    factory.getUserGroups = function(userId, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            userGroupResource(_token).getUserGroups({
+                userId: userId
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    factory.updateUserMembership = function(userId, groupSet, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            userGroupResource(_token).updateUserMembership({
+                userId: userId
+            },{
+                groupSet: groupSet
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
     };
 
     return factory;
@@ -182,7 +407,6 @@ angular.module('dataLake.factory.admin', ['ngResource', 'dataLake.utils', 'dataL
     };
 
     return factory;
-
 
 })
 

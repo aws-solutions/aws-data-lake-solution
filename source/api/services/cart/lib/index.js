@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -23,6 +23,7 @@
 let AWS = require('aws-sdk');
 let Cart = require('./cart.js');
 let AccessLog = require('./access-log.js');
+let AccessValidator = require('access-validator');
 const servicename = 'data-lake-cart-service';
 
 /**
@@ -33,16 +34,8 @@ const servicename = 'data-lake-cart-service';
  */
 module.exports.respond = function(event, cb) {
 
-    // 2017-02-18: hotfix to accomodate API Gateway header transformations
-    let _authToken = '';
-    if (event.headers.Auth) {
-        console.log(['Header token post transformation:', 'Auth'].join(' '));
-        _authToken = event.headers.Auth;
-    } else if (event.headers.auth) {
-        console.log(['Header token post transformation:', 'auth'].join(' '));
-        _authToken = event.headers.auth;
-    }
-
+    let _accessValidator = new AccessValidator();
+    let _authToken = _accessValidator.getAuthToken(event.headers);
     let _authCheckPayload = {
         authcheck: ['Admin', 'Member'],
         authorizationToken: _authToken
@@ -97,6 +90,7 @@ function processRequest(event, ticket, cb) {
     let _accessLog = new AccessLog();
     let _operation = '';
     let _response = '';
+    let _accessValidator = new AccessValidator();
 
     let _body = {};
     if (event.body) {
@@ -186,16 +180,7 @@ function processRequest(event, ticket, cb) {
     } else if (event.resource === '/cart' && event.httpMethod === 'POST') {
         _operation = 'checking out user\'s cart';
 
-        // 2017-02-18: hotfix to accomodate API Gateway header transformations
-        let _authToken = '';
-        if (event.headers.Auth) {
-            console.log(['Header token post transformation:', 'Auth'].join(' '));
-            _authToken = event.headers.Auth;
-        } else if (event.headers.auth) {
-            console.log(['Header token post transformation:', 'auth'].join(' '));
-            _authToken = event.headers.auth;
-        }
-
+        let _authToken = _accessValidator.getAuthToken(event.headers);
         _cart.checkout(_body, ticket, _authToken, function(err, data) {
             if (err) {
                 console.log(err);

@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -190,6 +190,45 @@ angular.module('dataLake.factory.cart', ['ngResource', 'dataLake.utils', 'dataLa
             $state.go('signin', {});
         });
 
+    };
+
+    factory.deletePackage = function(packageId, cb) {
+        authService.getUserAccessTokenWithUsername().then(function(data) {
+            var _token = ['tk:', data.token.jwtToken].join('');
+
+            cartResource(_token).query({}, function(data) {
+                for (var i = 0; i < data.Items.length; i++) {
+                    if (data.Items[i].package_id === packageId) {
+                        cartItemResource(_token).remove({
+                            itemId: data.Items[i].item_id
+
+                        }, function(data) {
+                            cartResource(_token).query({}, function(data) {
+                                var _cart = $_.filter(data.Items, function(o) {
+                                    return o.cart_item_status === 'pending' || o.cart_item_status === 'unable_to_process';
+                                });
+
+                                factory.cartCount = _cart.length;
+                                return cb(null, null);
+
+                            }, function(err) {
+                                return cb(err, null);
+                            });
+                        }, function(err) {
+                            return cb(err, null);
+                        });
+                    }
+                }
+                return cb(null, null);
+
+            }, function(err) {
+                return cb(err, null);
+            });
+
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
     };
 
     return factory;

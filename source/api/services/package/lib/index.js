@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -26,6 +26,7 @@ let ContentPackage = require('./content-package.js');
 let Dataset = require('./dataset.js');
 let Metadata = require('./metadata.js');
 let AccessLog = require('./access-log.js');
+let AccessValidator = require('access-validator');
 const servicename = 'data-lake-package-service';
 
 /**
@@ -35,17 +36,8 @@ const servicename = 'data-lake-package-service';
  * @param {respond~requestCallback} cb - The callback that handles the response.
  */
 module.exports.respond = function(event, cb) {
-
-    // 2017-02-18: hotfix to accomodate API Gateway header transformations
-    let _authToken = '';
-    if (event.headers.Auth) {
-        console.log(['Header token post transformation:', 'Auth'].join(' '));
-        _authToken = event.headers.Auth;
-    } else if (event.headers.auth) {
-        console.log(['Header token post transformation:', 'auth'].join(' '));
-        _authToken = event.headers.auth;
-    }
-
+    let _accessValidator = new AccessValidator();
+    let _authToken = _accessValidator.getAuthToken(event.headers);
     let _authCheckPayload = {
         authcheck: ['Admin', 'Member'],
         authorizationToken: _authToken
@@ -99,6 +91,7 @@ function processRequest(event, ticket, cb) {
         Error: ['Invalid path request ', event.resource, ', ', event.httpMethod].join('')
     };
 
+    let _accessValidator = new AccessValidator();
     let _package = new ContentPackage();
     let _dataset = new Dataset();
     let _metadata = new Metadata();
@@ -128,10 +121,10 @@ function processRequest(event, ticket, cb) {
         });
     } else if (event.resource === '/packages/{package_id}' && event.httpMethod === 'GET') {
         _operation = ['reading package', event.pathParameters.package_id].join(' ');
-        _package.getPackage(event.pathParameters.package_id, function(err, data) {
+        _package.getPackage(event.pathParameters.package_id, ticket, function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -148,10 +141,11 @@ function processRequest(event, ticket, cb) {
         });
     } else if (event.resource === '/packages/{package_id}' && event.httpMethod === 'DELETE') {
         _operation = ['deleting package', event.pathParameters.package_id].join(' ');
-        _package.deletePackage(event, ticket, function(err, data) {
+        let _authToken = _accessValidator.getAuthToken(event.headers);
+        _package.deletePackage(event.pathParameters.package_id, _authToken, ticket, function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -171,7 +165,7 @@ function processRequest(event, ticket, cb) {
         _package.createPackage(event, ticket, function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -191,7 +185,7 @@ function processRequest(event, ticket, cb) {
         _package.updatePackage(event, ticket, function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -208,10 +202,10 @@ function processRequest(event, ticket, cb) {
         });
     } else if (event.resource === '/packages/{package_id}/datasets' && event.httpMethod === 'GET') {
         _operation = ['listing datasets for package', event.pathParameters.package_id].join(' ');
-        _dataset.getPackageDatsets(event.pathParameters.package_id, function(err, data) {
+        _dataset.getPackageDatasets(event.pathParameters.package_id, ticket, function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -230,11 +224,11 @@ function processRequest(event, ticket, cb) {
         _operation = ['reading dataset', event.pathParameters.dataset_id, 'from package',
             event.pathParameters.package_id
         ].join(' ');
-        _dataset.getPackageDataset(event.pathParameters.package_id, event.pathParameters.dataset_id,
+        _dataset.getPackageDataset(event.pathParameters.package_id, event.pathParameters.dataset_id, ticket,
             function(err, data) {
                 if (err) {
                     console.log(err);
-                    _response = buildOutput(500, err);
+                    _response = buildOutput(err.code, err);
                     _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                         'failed/error',
                         function(err, resp) {
@@ -257,7 +251,7 @@ function processRequest(event, ticket, cb) {
             function(err, data) {
                 if (err) {
                     console.log(err);
-                    _response = buildOutput(500, err);
+                    _response = buildOutput(err.code, err);
                     _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                         'failed/error',
                         function(err, resp) {
@@ -277,7 +271,7 @@ function processRequest(event, ticket, cb) {
         _dataset.createPackageDataset(event.pathParameters.package_id, event.body, ticket, function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -297,22 +291,13 @@ function processRequest(event, ticket, cb) {
             event.pathParameters.package_id
         ].join(' ');
 
-        // 2017-02-18: hotfix to accomodate API Gateway header transformations
-        let _authToken = '';
-        if (event.headers.Auth) {
-            console.log(['Header token post transformation:', 'Auth'].join(' '));
-            _authToken = event.headers.Auth;
-        } else if (event.headers.auth) {
-            console.log(['Header token post transformation:', 'auth'].join(' '));
-            _authToken = event.headers.auth;
-        }
-
+        let _authToken = _accessValidator.getAuthToken(event.headers);
         _dataset.processPackageDatasetManifest(event.pathParameters.package_id, event.pathParameters.dataset_id,
-            _authToken,
+            _authToken, ticket,
             function(err, data) {
                 if (err) {
                     console.log(err);
-                    _response = buildOutput(500, err);
+                    _response = buildOutput(err.code, err);
                     _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                         'failed/error',
                         function(err, resp) {
@@ -373,16 +358,7 @@ function processRequest(event, ticket, cb) {
     } else if (event.resource === '/packages/{package_id}/metadata/{metadata_id}' && event.httpMethod === 'POST') {
         _operation = ['creating metadata for package', event.pathParameters.package_id].join(' ');
 
-        // 2017-02-18: hotfix to accomodate API Gateway header transformations
-        let _authToken = '';
-        if (event.headers.Auth) {
-            console.log(['Header token post transformation:', 'Auth'].join(' '));
-            _authToken = event.headers.Auth;
-        } else if (event.headers.auth) {
-            console.log(['Header token post transformation:', 'auth'].join(' '));
-            _authToken = event.headers.auth;
-        }
-
+        let _authToken = _accessValidator.getAuthToken(event.headers);
         _metadata.createPackageMetadata(event.pathParameters.package_id, event.body, _authToken, ticket,
             function(err, data) {
                 if (err) {
@@ -402,8 +378,123 @@ function processRequest(event, ticket, cb) {
                         });
                 }
             });
+
+    } else if (event.resource === '/packages/{package_id}/tables' && event.httpMethod === 'GET') {
+        _operation = ['listing AWS Glue tables for package', event.pathParameters.package_id].join(' ');
+
+        _package.getTables(event.pathParameters.package_id, ticket, function(err, data) {
+            if (err) {
+                console.log(err);
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
+
+    } else if (event.resource === '/packages/{package_id}/tables/{table_name}' && event.httpMethod === 'GET') {
+        _operation = ['reading AWS Glue table ', event.pathParameters.table_name, 'for package',
+            event.pathParameters.package_id
+        ].join(' ');
+
+        _package.viewTableData(event.pathParameters.package_id, decodeURI(event.pathParameters.table_name), ticket, function(err, data) {
+            if (err) {
+                console.log(err);
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
+
+    } else if (event.resource === '/packages/{package_id}/crawler' && event.httpMethod === 'GET') {
+        _operation = ['reading AWS Glue crawler info for package', event.pathParameters.package_id].join(' ');
+
+        _package.getCrawler(event.pathParameters.package_id, ticket, function(err, data) {
+            if (err) {
+                console.log(err);
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
+
+    } else if (event.resource === '/packages/{package_id}/crawler' && event.httpMethod === 'POST') {
+        _operation = ['starting AWS Glue crawler for package', event.pathParameters.package_id].join(' ');
+
+        _package.startCrawler(event.pathParameters.package_id, ticket,
+            function(err, data) {
+                if (err) {
+                    console.log(err);
+                    _response = buildOutput(err.code, err);
+                    _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                        'failed/error',
+                        function(err, resp) {
+                            return cb(_response, null);
+                        });
+                } else {
+                    _response = buildOutput(200, data);
+                    _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                        'success',
+                        function(err, resp) {
+                            return cb(null, _response);
+                        });
+                }
+            });
+
+    } else if (event.resource === '/packages/{package_id}/crawler' && event.httpMethod === 'PUT') {
+        _operation = ['update or create AWS Glue crawler for package', event.pathParameters.package_id].join(' ');
+
+        _package.updateOrCreateCrawler(event.pathParameters.package_id, ticket,
+            function(err, data) {
+                if (err) {
+                    console.log(err);
+                    _response = buildOutput(err.code, err);
+                    _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                        'failed/error',
+                        function(err, resp) {
+                            return cb(_response, null);
+                        });
+                } else {
+                    _response = buildOutput(200, data);
+                    _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                        'success',
+                        function(err, resp) {
+                            return cb(null, _response);
+                        });
+                }
+            });
+
     } else {
-        _response = buildOutput(500, INVALID_PATH_ERR);
+        _response = buildOutput(501, INVALID_PATH_ERR);
         return cb(_response, null);
     }
 

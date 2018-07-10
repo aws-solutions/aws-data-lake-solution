@@ -39,6 +39,10 @@
                     <awsui-control-group validation-message="" label="Role">
                         <awsui-select data-disabled="false"  ng-model="user.role" placeholder="Select a role..." items="roles"></awsui-select>
                     </awsui-control-group>
+                    <awsui-control-group validation-message="" label="Groups">
+                        <awsui-checkbox ng-model="groups['all']" label="All"></awsui-checkbox>
+                        <awsui-checkbox ng-repeat="group in groups['groups']" ng-model="group.visible" checked="groups['all'] ? true : group.visible" disabled="groups['all'] ? 'disabled' : ''" label="{{group.name}}"></awsui-checkbox>
+                    </awsui-control-group>
                     <awsui-control-group label="Created">
                         {{user.created_at | moment:"MMM Do YYYY, h:mm:ss a"}}
                     </awsui-control-group>
@@ -85,7 +89,7 @@
         </awsui-tabs>
     </form>
 </section>
-<awsui-modal visible="showDeleteModal" header="Delete user">
+<awsui-modal visible="showDeleteModal" header="Delete user" dismiss="closeDeleteModal()">
     <span dom-region="content">
         <p>You are about to <b class="awsui-status-negative">delete</b> the user {{user.name}}, this will remove the user's access and account from the data lake. Do you want to proceed?</p>
     </span>

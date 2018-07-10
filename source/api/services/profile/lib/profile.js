@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -30,7 +30,6 @@ const dynamoConfig = {
     credentials: creds,
     region: process.env.AWS_REGION
 };
-const ddbTable = 'data-lake-settings';
 
 /**
  * Performs profile actions for a user, such as, creating a secret access key and retrieving
@@ -55,7 +54,6 @@ let profile = (function() {
 
         getConfigInfo(function(err, config) {
             if (err) {
-                console.log(err);
                 return cb(err, null);
             }
 
@@ -77,7 +75,6 @@ let profile = (function() {
 
         getConfigInfo(function(err, config) {
             if (err) {
-                console.log(err);
                 return cb(err, null);
             }
 
@@ -92,7 +89,7 @@ let profile = (function() {
             kms.encrypt(params, function(err, keydata) {
                 if (err) {
                     console.log(err);
-                    return cb(err, null);
+                    return cb({code: 502, message: "Failed to encrypt API Key."}, null);
                 }
 
                 let _encryptedKey = keydata.CiphertextBlob.toString('base64');
@@ -111,13 +108,10 @@ let profile = (function() {
                     data) {
                     if (err) {
                         console.log(err);
-                        return cb(err, null);
+                        return cb({code: 502, message: "Failed to update user  attributes."}, null);
                     }
 
-                    return cb(null, {
-                        key: _key
-                    });
-
+                    return cb(null, {key: _key});
                 });
             });
 
@@ -130,28 +124,29 @@ let profile = (function() {
      * @param {getConfigInfo~requestCallback} cb - The callback that handles the response.
      */
     let getConfigInfo = function(cb) {
-        console.log('Retrieving app-config information...');
+
         let params = {
-            TableName: ddbTable,
+            TableName: 'data-lake-settings',
             Key: {
                 setting_id: 'app-config'
             }
         };
 
-        const docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
-        docClient.get(params, function(err, data) {
-            if (err) {
-                console.log(err);
-                return cb({
-                    error: {
-                        message: 'Error retrieving app configuration settings [ddb].'
-                    }
-                }, null);
-            }
+        let docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
+        if (typeof cb !== 'undefined' && cb) {
+            docClient.get(params, function(err, data) {
+                if (err) {
+                    console.log(err);
+                    return cb({code: 502, message: "Failed to retrieving app configuration settings [ddb]."}, null);
+                }
 
-            return cb(null, data);
-        });
+                return cb(null, data);
+            });
+        } else {
+            return docClient.get(params).promise();
+        }
     };
+
 
     return profile;
 

@@ -4,40 +4,46 @@
 </h1>
 <section class="awsui-util-mt-l">
     <h3>General Information</h3>
-    <p>Your Data Lake user account information. Please contact your administrator for further information.</p>
-    <awsui-control-group label="User ID">
-        {{user.username}}
-    </awsui-control-group>
-    <awsui-control-group validation-message="" label="Display Name">
-        {{user.display_name}}
-    </awsui-control-group>
-    <awsui-control-group validation-message="" label="Email">
-        {{user.email}}
-    </awsui-control-group>
-    <awsui-control-group validation-message="" label="Role">
-        {{user.role}}
-    </awsui-control-group>
-    <awsui-control-group validation-message="" label="Role">
-        <awsui-button variant="primary" text="Change Password" ng-click="changePassword()"></awsui-button>
-    </awsui-control-group>
-    <h3>API Access</h3>
-    <div ng-show="!user.accesskey">
-        <p>You have not been granted access to the Data Lake API. Please contact your administrator to request access.</p>
-    </div>
-    <div ng-show="user.accesskey">
-        <p>Your Data Lake API credentials are listed below. Please contact your administrator for further information.</p>
-        <awsui-control-group validation-message="" label="Data Lake API Endpoint">
-            {{profile.hostname}}
+    <awsui-alert type={{awsUiAlert.type}} ng-show="awsUiAlert.show">
+        <span dom-region="header">{{awsUiAlert.header}}</span>
+        <span dom-region="content">{{awsUiAlert.content}}<button class="awsui-alert-dismiss-control awsui-alert-times-{{awsUiAlert.type}} awsui-button-as-link awsui-icon" aria-label="close" type="button" ng-click="dismissAwsUiAlert()" ng-show="!awsUiAlert.criticalError"></button></span>
+    </awsui-alert>
+    <div ng-show="!awsUiAlert.criticalError">
+        <p>Your Data Lake user account information. Please contact your administrator for further information.</p>
+        <awsui-control-group label="User ID">
+            {{user.username}}
         </awsui-control-group>
-        <awsui-control-group validation-message="" label="Data Lake Access Key">
-            {{user.accesskey}}
+        <awsui-control-group validation-message="" label="Display Name">
+            {{user.display_name}}
         </awsui-control-group>
-        <awsui-control-group validation-message="" label="Data Lake Secret Access Key">
-            <awsui-button variant="primary" text="Generate" ng-click="generateSecretKey()"></awsui-button>
+        <awsui-control-group validation-message="" label="Email">
+            {{user.email}}
         </awsui-control-group>
+        <awsui-control-group validation-message="" label="Role">
+            {{user.role}}
+        </awsui-control-group>
+        <awsui-control-group validation-message="" label="Role">
+            <awsui-button variant="primary" text="Change Password" ng-click="changePassword()"></awsui-button>
+        </awsui-control-group>
+        <h3>API Access</h3>
+        <div ng-show="!user.accesskey">
+            <p>You have not been granted access to the Data Lake API. Please contact your administrator to request access.</p>
+        </div>
+        <div ng-show="user.accesskey">
+            <p>Your Data Lake API credentials are listed below. Please contact your administrator for further information.</p>
+            <awsui-control-group validation-message="" label="Data Lake API Endpoint">
+                {{profile.hostname}}
+            </awsui-control-group>
+            <awsui-control-group validation-message="" label="Data Lake Access Key">
+                {{user.accesskey}}
+            </awsui-control-group>
+            <awsui-control-group validation-message="" label="Data Lake Secret Access Key">
+                <awsui-button variant="primary" text="Generate" ng-click="generateSecretKey()"></awsui-button>
+            </awsui-control-group>
+        </div>
     </div>
 </section>
-<awsui-modal visible="showSecretModal" header="API Credentials">
+<awsui-modal visible="showSecretModal" header="API Credentials" dismiss="closeSecretModal()">
     <span dom-region="content">
         <p>Your secret access key has been created successfully.</p>
         <p><label>This is the last time these User security credentials will be available for download.</label></p>

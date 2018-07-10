@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -26,12 +26,6 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
     var datapackagesResource = function(token) {
         var _url = [APIG_ENDPOINT, 'packages'].join('/');
         return $resource(_url, {}, {
-            query: {
-                method: 'GET',
-                headers: {
-                    Auth: token
-                }
-            },
             getGovernance: {
                 method: 'POST',
                 headers: {
@@ -73,20 +67,60 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
         });
     };
 
-    factory.listDataPackages = function(cb) {
 
-        authService.getUserAccessToken().then(function(token) {
-            var _token = ['tk:', token.jwtToken].join('');
-            datapackagesResource(_token).query({}, function(data) {
-                return cb(null, data.Items);
-            }, function(err) {
-                return cb(err, null);
-            });
-        }, function(msg) {
-            console.log('Unable to retrieve the user session.');
-            $state.go('signin', {});
+    var tablesResource = function(token) {
+        var _url = [APIG_ENDPOINT, 'packages/:packageId/tables'].join('/');
+        return $resource(_url, {
+            packageId: '@packageId'
+        }, {
+            getTables: {
+                method: 'GET',
+                headers: {
+                    Auth: token
+                }
+            }
         });
+    };
 
+    var tableResource = function(token) {
+        var _url = [APIG_ENDPOINT, 'packages/:packageId/tables/:tableName'].join('/');
+        return $resource(_url, {
+            packageId: '@packageId',
+            tableName: '@tableName'
+        }, {
+            viewTableData: {
+                method: 'GET',
+                headers: {
+                    Auth: token
+                }
+            }
+        });
+    };
+
+    var crawlerResource = function(token) {
+        var _url = [APIG_ENDPOINT, 'packages/:packageId/crawler'].join('/');
+        return $resource(_url, {
+            packageId: '@packageId'
+        }, {
+            getCrawler: {
+                method: 'GET',
+                headers: {
+                    Auth: token
+                }
+            },
+            startCrawler: {
+                method: 'POST',
+                headers: {
+                    Auth: token
+                }
+            },
+            updateOrCreateCrawler: {
+                method: 'PUT',
+                headers: {
+                    Auth: token
+                }
+            }
+        });
     };
 
     factory.listGovernanceRequirements = function(cb) {
@@ -107,12 +141,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    factory.getDataPackage = function(packageid, cb) {
+    factory.getDataPackage = function(packageId, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             datapackageResource(_token).get({
-                packageId: packageid
+                packageId: packageId
             }, function(data) {
                 if ($_.isEmpty(data)) {
                     return cb(null, data);
@@ -128,13 +162,13 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    factory.createDataPackage = function(packageid, newpackage, cb) {
+    factory.createDataPackage = function(packageId, newpackage, cb) {
 
         authService.getUserAccessTokenWithUsername().then(function(data) {
             var _token = ['tk:', data.token.jwtToken].join('');
             newpackage.owner = data.username;
             datapackageResource(_token).create({
-                packageId: packageid
+                packageId: packageId
             }, newpackage, function(data) {
                 if ($_.isEmpty(data)) {
                     return cb(null, data);
@@ -151,12 +185,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    factory.deleteDataPackage = function(packageid, cb) {
+    factory.deleteDataPackage = function(packageId, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             datapackageResource(_token).remove({
-                packageId: packageid
+                packageId: packageId
             }, function(data) {
                 return cb(null, data);
             }, function(err) {
@@ -169,12 +203,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    factory.updateDataPackage = function(packageid, newpackage, cb) {
+    factory.updateDataPackage = function(packageId, newpackage, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             datapackageResource(_token).save({
-                packageId: packageid
+                packageId: packageId
             }, newpackage, function(data) {
                 if ($_.isEmpty(data)) {
                     return cb(null, data);
@@ -191,8 +225,107 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    return factory;
+    //-------------------------------------------------------------------------
+    // [AWS Glue Integration] Crawler
+    //-------------------------------------------------------------------------
+    factory.getCrawler = function(packageId, cb) {
 
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            crawlerResource(_token).getCrawler({
+                packageId: packageId
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    factory.startCrawler = function(packageId, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            crawlerResource(_token).startCrawler({
+                packageId: packageId
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    factory.updateOrCreateCrawler = function(packageId, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            crawlerResource(_token).updateOrCreateCrawler({
+                packageId: packageId
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    //-------------------------------------------------------------------------
+    // [AWS Glue Integration] Table
+    //-------------------------------------------------------------------------
+    factory.getTables = function(packageId, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            tablesResource(_token).getTables({
+                packageId: packageId
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    //-------------------------------------------------------------------------
+    // [Amazon Athena Integration] Table Data
+    //-------------------------------------------------------------------------
+    factory.viewTableData = function(packageId, tableName, cb) {
+
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
+            tableResource(_token).viewTableData({
+                packageId: packageId,
+                tableName: tableName
+            }, function(data) {
+                return cb(null, data);
+            }, function(err) {
+                return cb(err, null);
+            });
+        }, function(msg) {
+            console.log('Unable to retrieve the user session.');
+            $state.go('signin', {});
+        });
+
+    };
+
+    return factory;
 
 })
 
@@ -241,12 +374,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
         });
     };
 
-    factory.listPackageMetadata = function(packageid, cb) {
+    factory.listPackageMetadata = function(packageId, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             packageMetadataResource(_token).query({
-                packageId: packageid
+                packageId: packageId
             }, function(data) {
                 return cb(null, data.Items);
             }, function(err) {
@@ -259,12 +392,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    factory.getMetadata = function(packageid, metadataid, cb) {
+    factory.getMetadata = function(packageId, metadataid, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             metadataResource(_token).get({
-                packageId: packageid,
+                packageId: packageId,
                 metadataId: metadataid
             }, function(data) {
                 if ($_.isEmpty(data)) {
@@ -282,12 +415,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    factory.createMetadata = function(packageid, newmetadata, cb) {
+    factory.createMetadata = function(packageId, newmetadata, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             metadataResource(_token).create({
-                packageId: packageid,
+                packageId: packageId,
                 metadataId: 'new'
             }, newmetadata, function(data) {
                 if ($_.isEmpty(data)) {
@@ -306,12 +439,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    factory.deleteMetadata = function(packageid, metadataid, cb) {
+    factory.deleteMetadata = function(packageId, metadataid, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             metadataResource(_token).remove({
-                packageId: packageid,
+                packageId: packageId,
                 metadataId: metadataid
             }, function(data) {
                 return cb(null, data);
@@ -401,12 +534,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
             });
     };
 
-    factory.listPackageDatasets = function(packageid, cb) {
+    factory.listPackageDatasets = function(packageId, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             packageDatasetResource(_token).query({
-                packageId: packageid
+                packageId: packageId
             }, function(data) {
                 return cb(null, data.Items);
             }, function(err) {
@@ -418,12 +551,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
         });
     };
 
-    factory.getDataset = function(packageid, datasetid, cb) {
+    factory.getDataset = function(packageId, datasetid, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             datasetResource(_token).get({
-                packageId: packageid,
+                packageId: packageId,
                 datasetId: datasetid
             }, function(data) {
                 if ($_.isEmpty(data)) {
@@ -441,12 +574,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    factory.createDataset = function(packageid, newdataset, cb) {
+    factory.createDataset = function(packageId, newdataset, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             datasetResource(_token).create({
-                packageId: packageid,
+                packageId: packageId,
                 datasetId: 'new'
             }, newdataset, function(data) {
                 if ($_.isEmpty(data)) {
@@ -464,12 +597,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
 
     };
 
-    factory.deleteDataset = function(packageid, datasetid, cb) {
+    factory.deleteDataset = function(packageId, datasetid, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             datasetResource(_token).remove({
-                packageId: packageid,
+                packageId: packageId,
                 datasetId: datasetid
             }, function(data) {
                 return cb(null, data);
@@ -491,12 +624,12 @@ angular.module('dataLake.factory.package', ['ngResource', 'dataLake.utils', 'dat
         });
     }
 
-    factory.processManifest = function(packageid, datasetid, cb) {
+    factory.processManifest = function(packageId, datasetid, cb) {
 
         authService.getUserAccessToken().then(function(token) {
             var _token = ['tk:', token.jwtToken].join('');
             datasetProcessResource(_token).process({
-                packageId: packageid,
+                packageId: packageId,
                 datasetId: datasetid
             }, {}, function(data) {
                 if ($_.isEmpty(data)) {

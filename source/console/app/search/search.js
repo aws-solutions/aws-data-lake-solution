@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -17,8 +17,16 @@
 
 'use strict';
 
-angular.module('dataLake.search', ['dataLake.main', 'dataLake.utils', 'dataLake.factory.search'])
-
+angular.module(
+    'dataLake.search',
+    [
+        'dataLake.main',
+        'dataLake.utils',
+        'dataLake.factory.search',
+        'dataLake.factory.package',
+        'dataLake.factory.cart'
+    ]
+)
 .config(['$stateProvider', '$urlRouterProvider', function($stateProvider,
     $urlRouterProvider) {
     $stateProvider.state('search', {
@@ -40,96 +48,66 @@ angular.module('dataLake.search', ['dataLake.main', 'dataLake.utils', 'dataLake.
     });
 }])
 
-.controller('SearchCtrl', function($scope, $state, $stateParams, $resource, $sce, $_, $blockUI, searchFactory) {
+.controller('SearchCtrl', function($scope, $state, $stateParams, $resource, $sce, $_, $blockUI, searchFactory, dataPackageFactory, cartFactory, authService) {
 
     $scope.results = [];
     $scope.searchString = '';
-    $scope.no_results = true;
-    $scope.showSearchError = false;
 
-    var replaceIndex = function(s, at, length, repl) {
-        return s.substr(0, at) + repl + s.substr(at + length, s.length);
-    };
+    $scope.awsUiAlert = {}
+    $scope.awsUiAlert.show = false;
+    $scope.awsUiAlert.criticalError = false;
+    $scope.awsUiAlert.type = "";
+    $scope.awsUiAlert.header = "";
+    $scope.awsUiAlert.content = "";
 
-    var markResultsText = function(data, terms) {
-        var _terms = terms.split(',');
-        for (var i = 0; i < data.length; i++) {
-            for (var k = 0; k < _terms.length; k++) {
-                if (_terms[k].trim() !== '*') {
-                    var searchMask = _terms[k].replace(/ /g, '');
-                    var regEx = new RegExp(searchMask, 'ig');
-                    var resArray;
-
-                    var _replaceIndexes = [];
-                    while ((resArray = regEx.exec(data[i].description)) !== null) {
-                        _replaceIndexes.push({
-                            textIndex: regEx.lastIndex - resArray[0].length,
-                            text: resArray[0]
-                        });
-                    }
-
-                    var _replaceIndexesName = [];
-                    while ((resArray = regEx.exec(data[i].name)) !== null) {
-                        _replaceIndexesName.push({
-                            textIndex: regEx.lastIndex - resArray[0].length,
-                            text: resArray[0]
-                        });
-                    }
-
-                    var _reversed = _replaceIndexes.reverse();
-                    for (var j = 0; j < _reversed.length; j++) {
-                        var replaceMask = ['<>', _reversed[j].text, '</>'].join('');
-                        data[i].description = replaceIndex(data[i].description, _reversed[j].textIndex,
-                            _reversed[j].text.length, replaceMask);
-                    }
-
-                    _reversed = _replaceIndexesName.reverse();
-                    for (var j = 0; j < _reversed.length; j++) {
-                        var replaceMask = ['<>', _reversed[j].text, '</>'].join('');
-                        data[i].name = replaceIndex(data[i].name, _reversed[j].textIndex,
-                            _reversed[j].text.length, replaceMask);
-                    }
-                }
-            }
-
-            data[i].description = data[i].description.replace(new RegExp('<>', 'ig'),
-                '<span class="awsui-label-content awsui-label-type-warning">');
-            data[i].description = data[i].description.replace(new RegExp('</>', 'ig'),
-                '</span>');
-            data[i].name = data[i].name.replace(new RegExp('<>', 'ig'),
-                '<span class="awsui-label-content awsui-label-type-warning">'
-            );
-            data[i].name = data[i].name.replace(new RegExp('</>', 'ig'),
-                '</span>');
-            data[i].name = [data[i].name, '[', moment(data[i].updated_at).format('M/D/YYYY hh:mm:ss A'), ']'].join(
-                ' ');
-        }
-    };
+    $scope.deleteModal = {};
+    $scope.deleteModal.show = false;
+    $scope.deleteModal.type = "";
+    $scope.deleteModal.id = "";
+    $scope.deleteModal.name = "";
 
     var searchPackages = function(terms) {
         $blockUI.start();
+        $scope.closeDeleteModal();
+        $scope.dismissAwsUiAlert();
+
         searchFactory.search(terms, function(err, data) {
             if (err) {
-                console.log('error', err);
-                $scope.no_results = true;
-                $scope.showSearchError = true;
-                $blockUI.stop();
+                $scope.results = [];
+                console.log('searchFactory search error:', err);
+                showErrorAlert('An unexpected error occurred when searching the data lake repository.');
                 return;
             }
 
-            $scope.results = data;
-
+            $scope.searchString = terms;
             if (data.length > 0) {
-                $scope.no_results = false;
-                markResultsText(data, terms);
+                cartFactory.listCart(function(err, cart) {
+                    if (err) {
+                        $scope.results = [];
+                        console.log('cartFactory listCart error:', err);
+                        showErrorAlert('An unexpected error occurred when searching the data lake repository.');
+                        return;
+                    }
+
+                    cart = $_.filter(cart, function(o) {
+                        return o.cart_item_status === 'pending' || o.cart_item_status === 'unable_to_process';
+                    });
+
+                    for (var i = 0; i < data.length; i++) {
+                        data[i].updated_at_pretty = moment(data[i].updated_at).format('M/D/YYYY hh:mm:ss A');
+                        data[i].created_at_pretty = moment(data[i].created_at).format('M/D/YYYY hh:mm:ss A');
+                        data[i].cart_item = $_.findWhere(cart, { package_id: data[i].package_id });
+                        data[i].cart_flag = data[i].cart_item ? true : false;
+                    }
+
+                    $scope.results = data;
+                    $blockUI.stop();
+                });
             } else {
-                $scope.no_results = true;
+                $scope.results = data;
+                $blockUI.stop();
             }
-
-            $blockUI.stop();
-
         });
-
     };
 
     $scope.trustSnippet = function(snippet) {
@@ -138,15 +116,148 @@ angular.module('dataLake.search', ['dataLake.main', 'dataLake.utils', 'dataLake.
 
     $scope.search = function(terms) {
         if (terms.trim() !== '') {
-            $scope.searchString = terms;
             searchPackages(terms);
+        } else {
+            $scope.results = [];
+            $scope.searchString = '';
+            showErrorAlert('Invalid search string.');
         }
     };
 
-    if ($stateParams.terms) {
-        $scope.search.terms = $stateParams.terms;
-        $scope.searchString = $stateParams.terms;
-        searchPackages($stateParams.terms);
-    }
+    $scope.deletePackage = function(packageId, packageName) {
+        $scope.deleteModal.show = true;
+        $scope.deleteModal.type = 'package';
+        $scope.deleteModal.id = packageId;
+        $scope.deleteModal.name = packageName;
+    };
 
+    $scope.closeDeleteModal = function() {
+        $scope.deleteModal.show = false;
+        $scope.deleteModal.type = '';
+        $scope.deleteModal.id = '';
+        $scope.deleteModal.name = '';
+    };
+
+    $scope.confirmDeleteModal = function() {
+        $blockUI.start();
+        $scope.dismissAwsUiAlert();
+
+        if ($scope.deleteModal.type === 'package') {
+            dataPackageFactory.deleteDataPackage($scope.deleteModal.id, function(err, resp) {
+                $scope.closeDeleteModal();
+                if (err) {
+                    console.log('deleteDataPackage error', err);
+                    showErrorAlert('An unexpected error occured when attempting to delete the package.');
+                    return;
+                }
+
+                cartFactory.deletePackage($scope.deleteModal.id, function(err, data) {
+                    if (err) {
+                        console.log('cartFactory.deletePackage error:', err);
+                    }
+
+                    $scope.search($scope.search.terms);
+                });
+            });
+        }
+    };
+
+    $scope.toggleCart = function(pkg) {
+        if (pkg.cart_flag) {
+            addToCart(pkg);
+        } else {
+            removeFromCart(pkg);
+        }
+    };
+
+    var addToCart = function(pkg) {
+        $blockUI.start();
+
+        var _item = {
+            package_id: pkg.package_id
+        };
+        cartFactory.createCartItem(_item, function(err, data) {
+            if (err) {
+                console.log('cartFactory.createCartItem error:', err);
+                showErrorAlert('An unexpected error occurred when adding package to the cart.');
+                return;
+            }
+
+            // Store cart item on package so that we know package is in cart
+            pkg.cart_item = data;
+            pkg.cart_flag = true;
+
+            // This updates the cart count, shown top right in the badge
+            cartFactory.getCartCount(function(err, data) {
+                if (err) {
+                    console.log('cartFactory.getCartCount error:', err);
+                    showErrorAlert('An unexpected error occurred when adding package to the cart.');
+                    return;
+                }
+
+                console.log(data);
+                $blockUI.stop();
+            });
+        });
+    };
+
+    var removeFromCart = function(pkg) {
+        $blockUI.start();
+
+        cartFactory.deleteCartItem(pkg.cart_item.item_id, function(err, data) {
+            if (err) {
+                console.log('cartFactory.deleteCartItem error:', err);
+                showErrorAlert('An unexpected error occurred when removing the package from cart.');
+                return;
+            }
+
+            // Store cart item on package so that we know package is in cart
+            pkg.cart_item = null;
+            pkg.cart_flag = false;
+
+            // This updates the cart count, shown top right in the badge
+            cartFactory.getCartCount(function(err, data) {
+                if (err) {
+                    console.log('cartFactory.getCartCount error:', err);
+                    showErrorAlert('An unexpected error occurred when removing the package from cart.');
+                    return;
+                }
+
+                console.log(data);
+                $blockUI.stop();
+            });
+        });
+    };
+
+    $scope.dismissAwsUiAlert = function() {
+        $scope.awsUiAlert.show = false;
+        $scope.awsUiAlert.criticalError = false;
+        $scope.awsUiAlert.type = "";
+        $scope.awsUiAlert.header = "";
+        $scope.awsUiAlert.content = "";
+    };
+
+    var showSuccessAlert = function(message) {
+        $scope.awsUiAlert.type = "success";
+        $scope.awsUiAlert.header = "Success";
+        $scope.awsUiAlert.content = message;
+        $scope.awsUiAlert.show = true;
+        $scope.awsUiAlert.criticalError = false;
+        $blockUI.stop();
+    };
+
+    var showErrorAlert = function(message, critical = false) {
+        $scope.awsUiAlert.type = "error";
+        $scope.awsUiAlert.header = "Error";
+        $scope.awsUiAlert.content = message;
+        $scope.awsUiAlert.show = true;
+        $scope.awsUiAlert.criticalError = critical;
+        $scope.closeDeleteModal();
+        $blockUI.stop();
+    };
+
+    if ($stateParams && $stateParams.terms) {
+        $scope.search.terms = $stateParams.terms
+        $scope.search($stateParams.terms);
+    }
 });

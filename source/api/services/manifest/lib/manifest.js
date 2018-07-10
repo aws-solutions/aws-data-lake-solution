@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -21,6 +21,8 @@ let moment = require('moment');
 let AWS = require('aws-sdk');
 let shortid = require('shortid');
 let _ = require('underscore');
+let https = require("https");
+let url = require('url');
 
 let creds = new AWS.EnvironmentCredentials('AWS'); // Lambda provided credentials
 
@@ -67,7 +69,7 @@ let manifest = (function() {
                 return cb(err, null);
             }
 
-            processManifest(event.dataset.package_id, _file, cb);
+            processManifest(event, _file, cb);
         });
 
     };
@@ -146,9 +148,12 @@ let manifest = (function() {
                             return cb(error, null);
                         }
 
-                        _entries.entries = content;
-                        let _filename = [items[index].item_id, 'json'].join('.');
+                        _entries.entries = content.entries;
+                        if (content.include_path.length > 0) {
+                            _entries.include_path = content.include_path;
+                        }
 
+                        let _filename = [items[index].item_id, 'json'].join('.');
                         let params = {
                             Bucket: defaultBucket,
                             Key: ['cart', items[index].user_id, _filename].join('/'),
@@ -230,13 +235,27 @@ let manifest = (function() {
      * @param {generateAccessContents~requestCallback} cb - The callback that handles the response.
      */
     let generateAccessContents = function(items, index, format, expiration, cb) {
-        var _content = [];
+        var _content = {
+            entries: [],
+            include_path: []
+        };
+
         if (index < items.length) {
-            //verify the item exists in s3
-            if (items[index].type === 'dataset') {
+            if (items[index].content_type === 'include-path') {
+                _content.include_path.push({
+                    bucket: items[index].s3_bucket,
+                    key: items[index].s3_key
+                });
+
+                generateAccessContents(items, index + 1, format, expiration, function(err, content) {
+                    _content.entries = _content.entries.concat(content.entries);
+                    _content.include_path = _content.include_path.concat(content.include_path);
+                    return cb(null, _content);
+                });
+
+            } else if (items[index].type === 'dataset') {
                 checkObjectExists(items[index].s3_bucket, items[index].s3_key, function(err, data) {
                     if (data) {
-
                         if (format === 'signed-url') {
                             let params = {
                                 Bucket: items[index].s3_bucket,
@@ -244,62 +263,28 @@ let manifest = (function() {
                                 Expires: expiration
                             };
                             var _url = s3.getSignedUrl('getObject', params);
-                            _content.push({
+                            _content.entries.push({
                                 url: _url
                             });
                         } else if (format === 'bucket-key') {
-                            _content.push({
+                            _content.entries.push({
                                 bucket: items[index].s3_bucket,
                                 key: items[index].s3_key
                             });
                         }
-
-                        generateAccessContents(items, index + 1, format, expiration, function(err,
-                            content) {
-                            if (err) {
-                                console.log(err);
-                            }
-
-                            if (content) {
-                                for (let i = 0; i < content.length; i++) {
-                                    _content.push(content[i]);
-                                }
-                            }
-
-                            return cb(null, _content);
-                        });
-
-                    } else {
-                        // item doesn't exist in S3, process next entry
-                        generateAccessContents(items, index + 1, format, expiration, function(err,
-                            content) {
-                            if (err) {
-                                console.log(err);
-                            }
-
-                            if (content) {
-                                for (let i = 0; i < content.length; i++) {
-                                    _content.push(content[i]);
-                                }
-                            }
-
-                            return cb(null, _content);
-                        });
                     }
+
+                    generateAccessContents(items, index + 1, format, expiration, function(err, content) {
+                        _content.entries = _content.entries.concat(content.entries);
+                        _content.include_path = _content.include_path.concat(content.include_path);
+                        return cb(null, _content);
+                    });
                 });
+
             } else {
-                // item is not a dataset file, process next entry
                 generateAccessContents(items, index + 1, format, expiration, function(err, content) {
-                    if (err) {
-                        console.log(err);
-                    }
-
-                    if (content) {
-                        for (let i = 0; i < content.length; i++) {
-                            _content.push(content[i]);
-                        }
-                    }
-
+                    _content.entries = _content.entries.concat(content.entries);
+                    _content.include_path = _content.include_path.concat(content.include_path);
                     return cb(null, _content);
                 });
             }
@@ -307,7 +292,6 @@ let manifest = (function() {
         } else {
             return cb(null, _content);
         }
-
     };
 
     /**
@@ -390,11 +374,13 @@ let manifest = (function() {
     /**
      * "Imports" (associates) each Amazon S3 object contained in an import manifest file
      * to a pacakge after validating the object is accessible to the data lake.
-     * @param {string} packageId - ID of data lake package.
+     * @param {JSON} event - Request event.
      * @param {string} file - File location on local storage of the donwloaded import manifest file.
      * @param {processManifest~requestCallback} cb - The callback that handles the response.
      */
-    let processManifest = function(packageId, file, cb) {
+    let processManifest = function(event, file, cb) {
+        let packageId = event.dataset.package_id;
+        let authorizationToken = event.authorizationToken;
         let fs = require('fs');
         fs.readFile(file, 'utf8', function(err, data) {
             if (err) {
@@ -411,15 +397,66 @@ let manifest = (function() {
 
             let _manifest = validateJSON(data);
             if (_manifest) {
-                processManifestEntry(packageId, _manifest.fileLocations, 0, function(err, data) {
+                processManifestEntry(event.dataset, _manifest.dataStore, 0, 0, function(err, data) {
                     console.log(data);
-                    updateManifestDatasetStatus('Processed', function(err, manifest) {
+
+                    let stateDesc = (data.errorCounter == 0) ? 'Processed' : `Failed to process ${data.errorCounter} file(s)`;
+                    updateManifestDatasetStatus(stateDesc, function(err, manifest) {
                         if (err) {
                             console.log(err);
                             return cb(err, null);
                         }
 
-                        return cb(null, 'Manifest read and processed...');
+                        getConfigInfo(function(err, config) {
+                            if (err) {
+                                console.log(err);
+                                return cb(err, null);
+                            }
+
+
+                            var params = {
+                                Bucket: config.Item.setting.defaultS3Bucket,
+                                MaxKeys: 1,
+                                Prefix: `${packageId}/`
+                            };
+                            let s3 = new AWS.S3();
+                            s3.listObjectsV2(params, function(err, data) {
+                                if (err) {
+                                    console.log("processManifest Error to list package files: ", err);
+                                }
+
+                                let parsedUrl = url.parse(config.Item.setting.apiEndpoint);
+                                let options = {
+                                    hostname: parsedUrl.hostname,
+                                    port: 443,
+                                    path: `${parsedUrl.path}/packages/${packageId}/crawler`,
+                                    method: 'PUT',
+                                    headers: {
+                                        'Content-Type': '',
+                                        'Auth': authorizationToken
+                                    }
+                                };
+
+                                //-----------------------------------------------------------------
+                                // If it is the first file of the package, the S3 must contain only
+                                // the manifest file then, by desing, package API must not only
+                                // create the AWS Glue crawler but also start it (POST, not PUT).
+                                //-----------------------------------------------------------------
+                                if (data && data.Contents.length == 1) {
+                                    options.method = 'POST';
+                                }
+
+                                console.log(options);
+                                const req = https.request(options, (res) => {
+                                    res.on("end", function () {
+                                        console.log('Manifest read and processed...');
+                                        return cb(null, 'Manifest read and processed...');
+                                    });
+                                });
+                                req.end();
+
+                            });
+                        });
                     });
                 });
             } else {
@@ -432,56 +469,49 @@ let manifest = (function() {
                     return cb(null, 'Invalid Manifest JSON. Manifest did not import...');
                 });
             }
-
         });
     };
 
     /**
      * Recursive helper to process each entry in an import manifest file and associate the object
      * to the data lake package.
-     * @param {string} packageId - ID of the data lake package to associate entries.
+     * @param {json} manifest - dataset being processed.
      * @param {array} entries - Array of entries from the import manifest file.
      * @param {integer} index - Index of the entry in the import manifest file.
+     * @param {integer} errorCounter - Number of manifest entries that failed.
      * @param {processManifestEntry~requestCallback} cb - The callback that handles the response.
      */
-    let processManifestEntry = function(packageId, entries, index, cb) {
+    let processManifestEntry = function(manifest, entries, index, errorCounter, cb) {
         if (index < entries.length) {
+            let includePathData = url.parse(entries[index].includePath);
             try {
                 let _dataset = {
-                    package_id: packageId,
-                    s3_bucket: '',
-                    s3_key: ''
+                  package_id: manifest.package_id,
+                  content_type: "include-path",
+                  created_by: _manifesDataset.created_by,
+                  s3_bucket: includePathData.hostname,
+                  s3_key: includePathData.path,
+                  excludePatterns: entries[index].excludePatterns ? entries[index].excludePatterns : [],
+                  name: includePathData.hostname + includePathData.path,
+                  owner: `imported from ${manifest.name}`,
+                  parent_dataset_id: manifest.dataset_id
                 };
-                let _pathparts = entries[index].url.split('//');
-                _dataset.s3_bucket = _pathparts[1].split('/', 1)[0];
-                _dataset.s3_key = _pathparts[1].replace([_dataset.s3_bucket, '/'].join(''), '');
-                let _allparts = _pathparts[1].split('/');
-                _dataset.name = _allparts[_allparts.length - 1];
-                _dataset.owner = 'Imported from S3';
-                _dataset.created_by = _manifesDataset.created_by;
 
-                checkObjectExists(_dataset.s3_bucket, _dataset.s3_key, function(err, data) {
-                    if (data) {
-                        _dataset.content_type = data.content_type;
-                        addDatasetToPackage(_dataset, function(err, data) {
-                            if (err) {
-                                console.log(
-                                    'Error adding the dataset to the package in ddb',
-                                    err);
-                            }
-
-                            processManifestEntry(packageId, entries, index + 1, cb);
-                        });
-                    } else {
-                        processManifestEntry(packageId, entries, index + 1, cb);
+                addDatasetToPackage(_dataset, function(err, data) {
+                    if (err) {
+                        console.log('Error adding the dataset to the package in ddb', err);
+                        errorCounter = errorCounter + 1;
                     }
+
+                    processManifestEntry(manifest, entries, index + 1, errorCounter, cb);
                 });
+
             } catch (ex) {
                 console.log('Manifest entry to able to be parsed ', entries[index].url);
-                processManifestEntry(packageId, entries, index + 1, cb);
+                processManifestEntry(manifest, entries, index + 1, errorCounter + 1, cb);
             }
         } else {
-            return cb(null, 'done processing entries...');
+            return cb(null, {message: 'done processing entries...', errorCounter: errorCounter});
         }
     };
 

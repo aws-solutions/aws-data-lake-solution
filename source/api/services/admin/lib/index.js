@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -21,11 +21,13 @@
  * Lib
  */
 
+let Group = require('./group.js');
 let User = require('./user.js');
 let Auth = require('./auth.js');
 let Setting = require('./setting.js');
 let ApiKey = require('./apikey.js');
 let AccessLog = require('./access-log.js');
+let AccessValidator = require('access-validator');
 const servicename = 'data-lake-admin-service';
 
 /**
@@ -52,21 +54,14 @@ module.exports.respond = function(event, cb) {
         });
     } else {
 
-        // 2017-02-18: hotfix to accomodate API Gateway header transformations
-        let _authToken = '';
-        if (event.headers.Auth) {
-            console.log(['Header token post transformation:', 'Auth'].join(' '));
-            _authToken = event.headers.Auth;
-        } else if (event.headers.auth) {
-            console.log(['Header token post transformation:', 'auth'].join(' '));
-            _authToken = event.headers.auth;
-        }
-
+        let _accessValidator = new AccessValidator();
+        let _authToken = _accessValidator.getAuthToken(event.headers);
         let _authPayload = {
             authorizationToken: _authToken
         };
+        let _roles = (event.resource === '/admin/groups' && event.httpMethod === 'GET') ? ['Admin', 'Member'] : ['Admin'];
 
-        _auth.authorizeRequest(_authPayload, ['Admin'], function(err, ticket) {
+        _auth.authorizeRequest(_authPayload, _roles, function(err, ticket) {
             if (err) {
                 console.log(err);
                 _response = buildOutput(500, err);
@@ -101,6 +96,7 @@ function processRequest(event, ticket, cb) {
         Error: ['Invalid path request ', event.resource, ', ', event.httpMethod].join('')
     };
 
+    let _group = new Group();
     let _user = new User();
     let _setting = new Setting();
     let _apikey = new ApiKey();
@@ -108,7 +104,198 @@ function processRequest(event, ticket, cb) {
     let _response = {};
     let _operation = '';
 
-    if (event.resource === '/admin/invitations' && event.httpMethod === 'POST') {
+    if (event.resource === '/admin/groups' && event.httpMethod === 'GET') {
+
+        _operation = 'list groups';
+        _group.listGroups(ticket, function(err, data) {
+            if (err) {
+                console.log(err);
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
+
+    } else if (event.resource === '/admin/groups/{group_name}' && event.httpMethod === 'PUT') {
+
+        _operation = 'create a new group';
+        let _body = JSON.parse(event.body);
+        _group.createGroup(decodeURI(event.pathParameters.group_name), _body.description, ticket, function(err, data) {
+            if (err) {
+                console.log(err);
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
+
+    } else if (event.resource === '/admin/groups/{group_name}' && event.httpMethod === 'POST') {
+
+        let groupName = decodeURI(event.pathParameters.group_name);
+        let _body = JSON.parse(event.body);
+        _operation = ['Update data lake group', groupName, _body.action].join(' ');
+
+        if (_body.action == 'updateGroup') {
+            _group.updateGroup(groupName, _body.description, ticket, function(err, data) {
+                if (err) {
+                    console.log(err);
+                    _response = buildOutput(err.code, err);
+                    _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                        'failed/error',
+                        function(err, resp) {
+                            return cb(_response, null);
+                        });
+                } else {
+                    _response = buildOutput(200, data);
+                    _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                        'success',
+                        function(err, resp) {
+                            return cb(null, _response);
+                        });
+                }
+            });
+        } else if (_body.action == 'removeUserFromGroup') {
+            _group.removeUserFromGroup(_body.userId, groupName, ticket, function(err, data) {
+                if (err) {
+                    console.log(err);
+                    _response = buildOutput(err.code, err);
+                    _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                        'failed/error',
+                        function(err, resp) {
+                            return cb(_response, null);
+                        });
+                } else {
+                    _response = buildOutput(200, data);
+                    _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                        'success',
+                        function(err, resp) {
+                            return cb(null, _response);
+                        });
+                }
+            });
+        } else {
+            let err = {code: 400, message: `Invalid parameters. Check if you are setting action for update group infomation or user list.`};
+            _response = buildOutput(err.code, err);
+            _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                'failed/error',
+                function(err, resp) {
+                    return cb(_response, null);
+                });
+        }
+
+    } else if (event.resource === '/admin/groups/{group_name}' && event.httpMethod === 'GET') {
+        let groupName = decodeURI(event.pathParameters.group_name);
+        _operation = ['retrieve data lake group', groupName].join(' ');
+
+        _group.getGroup(groupName, ticket, function(err, data) {
+            if (err) {
+                console.log(err);
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
+
+    } else if (event.resource === '/admin/groups/{group_name}' && event.httpMethod === 'DELETE') {
+
+        let groupName = decodeURI(event.pathParameters.group_name);
+        _operation = ['delete data lake group', groupName].join(' ');
+
+        _group.deleteGroup(groupName, ticket, function(err, data) {
+            if (err) {
+                console.log(err);
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
+
+    } else if (event.resource === '/admin/groups/membership/{user_id}' && event.httpMethod === 'GET') {
+
+        _operation = ['get ', event.pathParameters.user_id, ' groups'].join(' ');
+        _group.getUserGroups(event.pathParameters.user_id, ticket, function(err, data) {
+            if (err) {
+                console.log(err);
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
+
+    } else if (event.resource === '/admin/groups/membership/{user_id}' && event.httpMethod === 'POST') {
+
+        _operation = ['update ', event.pathParameters.user_id, ' group membership'].join(' ');
+        let _body = JSON.parse(event.body);
+        _group.updateUserMembership(event.pathParameters.user_id, _body.groupSet, ticket, function(err, data) {
+            if (err) {
+                console.log(err);
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
+
+    } else if (event.resource === '/admin/invitations' && event.httpMethod === 'POST') {
         _operation = 'create invitation for a new user';
         _user.inviteUser(event.body, function(err, data) {
             if (err) {
@@ -254,6 +441,7 @@ function processRequest(event, ticket, cb) {
             _response = buildOutput(401, 'Invalid user operation requested.');
             return cb(_response, null);
         }
+
     } else if (event.resource === '/admin/settings/config' && event.httpMethod === 'GET') {
         _operation = 'list data lake configuration settings';
         _setting.getAppSettings(function(err, data) {

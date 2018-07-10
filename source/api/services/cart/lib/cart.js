@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -22,6 +22,7 @@ let AWS = require('aws-sdk');
 let shortid = require('shortid');
 let _ = require('underscore');
 let Validator = require('jsonschema').Validator;
+let AccessValidator = require('access-validator');
 
 let creds = new AWS.EnvironmentCredentials('AWS'); // Lambda provided credentials
 
@@ -88,73 +89,97 @@ let cart = (function() {
      * @param {integer} index - Index of item in user's cart to process.
      * @param {getCartItemDetails~requestCallback} cb - The callback that handles the response.
      */
-    let getCartItemDetails = function(cart, index, cb) {
+    let getCartItemDetails = function(ticket, cart, index, cb) {
 
-        let _results = {
-            Items: []
-        };
+        let accessValidator = new AccessValidator();
+        accessValidator.getUserGroups(ticket.userid, function(err, data) {
+            if (err) {
+                console.log(err);
+                cb({error: {message: 'No valid permission.'}}, null);
+                return;
+            }
 
-        if (index < cart.Items.length) {
-            let params = {
-                TableName: 'data-lake-packages',
-                KeyConditionExpression: 'package_id = :pid',
-                ExpressionAttributeValues: {
-                    ':pid': cart.Items[index].package_id
-                }
+            let _results = {
+                Items: []
             };
 
-            docClient.query(params, function(err, resp) {
-                if (err) {
-                    console.log(err);
-                    return cb(err, null);
-                }
-
-                for (let i = 0; i < resp.Items.length; i++) {
-                    if (moment(cart.Items[index].expires) > moment.utc() ||
-                        cart.Items[index].cart_item_status == 'pending' ||
-                        cart.Items[index].cart_item_status == 'unable_to_process') {
-                        _results.Items.push({
-                            user_id: cart.Items[index].user_id,
-                            package_id: cart.Items[index].package_id,
-                            cart_item_status: cart.Items[index].cart_item_status,
-                            created_at: cart.Items[index].created_at,
-                            item_id: cart.Items[index].item_id,
-                            status_details: cart.Items[index].status_details,
-                            expires: cart.Items[index].expires,
-                            url: cart.Items[index].url,
-                            name: resp.Items[i].name,
-                            format: cart.Items[index].format,
-                            description: resp.Items[i].description
-                        });
+            if (index < cart.Items.length) {
+                let params = {
+                    TableName: 'data-lake-packages',
+                    KeyConditionExpression: 'package_id = :pid',
+                    ExpressionAttributeValues: {
+                        ':pid': cart.Items[index].package_id
                     }
-                }
+                };
 
-                let _index = index + 1;
-                if (_index < cart.Items.length) {
+                docClient.query(params, function(err, resp) {
+                    if (err) {
+                        console.log(err);
+                        return cb(err, null);
+                    }
 
-                    getCartItemDetails(cart, _index, function(err, data) {
-                        if (err) {
-                            console.log(err);
-                            return cb(err, null);
+                    for (let i = 0; i < resp.Items.length; i++) {
+
+                        // Skip if the package is deleted
+                        if (resp.Items[i].deleted) {
+                            continue;
                         }
 
-                        for (let i = 0; i < data.Items.length; i++) {
-                            _results.Items.push(data.Items[i]);
+                        // Skip if the user does not have access to the package
+                        if (ticket.role != 'Admin') {
+                            let user_groups = [];
+                            data.Groups.map(group => {user_groups.push(group.GroupName);});
+                            if (ticket.userid != resp.Items[i].owner && _.intersection(user_groups, resp.Items[i].groups).length == 0) {
+                                continue;
+                            }
                         }
 
+                        if (moment(cart.Items[index].expires) > moment.utc() ||
+                            cart.Items[index].cart_item_status == 'pending' ||
+                            cart.Items[index].cart_item_status == 'unable_to_process') {
+                            _results.Items.push({
+                                user_id: cart.Items[index].user_id,
+                                package_id: cart.Items[index].package_id,
+                                cart_item_status: cart.Items[index].cart_item_status,
+                                created_at: cart.Items[index].created_at,
+                                item_id: cart.Items[index].item_id,
+                                status_details: cart.Items[index].status_details,
+                                expires: cart.Items[index].expires,
+                                url: cart.Items[index].url,
+                                name: resp.Items[i].name,
+                                format: cart.Items[index].format,
+                                description: resp.Items[i].description
+                            });
+                        }
+                    }
+
+                    let _index = index + 1;
+                    if (_index < cart.Items.length) {
+
+                        getCartItemDetails(ticket, cart, _index, function(err, data) {
+                            if (err) {
+                                console.log(err);
+                                return cb(err, null);
+                            }
+
+                            for (let i = 0; i < data.Items.length; i++) {
+                                _results.Items.push(data.Items[i]);
+                            }
+
+                            return cb(null, _results);
+
+                        });
+
+                    } else {
                         return cb(null, _results);
+                    }
 
-                    });
+                });
+            } else {
+                return cb(null, _results);
+            }
 
-                } else {
-                    return cb(null, _results);
-                }
-
-            });
-        } else {
-            return cb(null, _results);
-        }
-
+        });
     };
 
     /**
@@ -180,7 +205,7 @@ let cart = (function() {
                 return cb(err, null);
             }
 
-            getCartItemDetails(resp, 0, function(err, data) {
+            getCartItemDetails(ticket, resp, 0, function(err, data) {
                 if (err) {
                     console.log(err);
                     return cb(err, null);

@@ -12,7 +12,6 @@ Parameters:
         Type: String
 
 Resources:
-
     DataLakeKmsKey:
         Type: "AWS::KMS::Key"
         Properties:
@@ -97,7 +96,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeLoggingRole"
                     - "Arn"
-            Runtime: "nodejs6.10"
+            Runtime: "nodejs8.10"
             Timeout: "60"
 
     DataLakeAdminRole:
@@ -190,8 +189,11 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeAdminRole"
                     - "Arn"
-            Runtime: "nodejs6.10"
+            Runtime: "nodejs8.10"
             Timeout: "60"
+            Environment:
+                Variables:
+                    USER_POOL_ID: !Ref "UserPoolId"
 
     DataLakeSearchRole:
         Type: "AWS::IAM::Role"
@@ -244,6 +246,12 @@ Resources:
                     -
                         Effect: "Allow"
                         Action:
+                            - "dynamodb:GetItem"
+                        Resource:
+                            - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-packages"]]
+                    -
+                        Effect: "Allow"
+                        Action:
                             - "lambda:InvokeFunction"
                         Resource:
                             -
@@ -254,6 +262,17 @@ Resources:
                                 Fn::GetAtt:
                                     - "DataLakeLoggingService"
                                     - "Arn"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "cognito-idp:AdminListGroupsForUser"
+                        Resource:
+                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/", Ref: UserPoolId]]
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "glue:GetTables"
+                        Resource: "*"
             Roles:
                 -
                     Ref: "DataLakeSearchRole"
@@ -272,8 +291,44 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeSearchRole"
                     - "Arn"
-            Runtime: "nodejs6.10"
+            Runtime: "nodejs8.10"
             Timeout: "60"
+            Environment:
+                Variables:
+                    USER_POOL_ID: !Ref "UserPoolId"
+
+    DataLakeGlueCrawlerEventRule:
+        Type: "AWS::Events::Rule"
+        Properties:
+            Description: "DataLakeSearchService is invoked when an AWS Glue crawler finishes successfully."
+            EventPattern:
+                source:
+                    - "aws.glue"
+                detail-type:
+                    - "Glue Crawler State Change"
+                detail:
+                    state:
+                        - "Succeeded"
+            State: "ENABLED"
+            Targets:
+                -
+                    Arn:
+                        Fn::GetAtt:
+                            - "DataLakeSearchService"
+                            - "Arn"
+                    Id: !Join ["-", ["data-lake-glue-crawler-event-rule", Ref: "AWS::Region" ]]
+
+    PermissionForEventsToInvokeLambda:
+        Type: "AWS::Lambda::Permission"
+        Properties:
+            FunctionName:
+                Ref: "DataLakeSearchService"
+            Action: "lambda:InvokeFunction"
+            Principal: "events.amazonaws.com"
+            SourceArn:
+                Fn::GetAtt:
+                    - "DataLakeGlueCrawlerEventRule"
+                    - "Arn"
 
     DataLakeManifestRole:
         Type: "AWS::IAM::Role"
@@ -339,9 +394,11 @@ Resources:
                     -
                         Effect: "Allow"
                         Action:
+                            - "s3:ListBucket"
                             - "s3:PutObject"
                         Resource:
                             - !Join ["", ["arn:aws:s3:::data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", "/*" ]]
+                            - !Join ["", ["arn:aws:s3:::data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
                     -
                         Effect: "Allow"
                         Action:
@@ -372,7 +429,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeManifestRole"
                     - "Arn"
-            Runtime: "nodejs6.10"
+            Runtime: "nodejs8.10"
             Timeout: "300"
 
     DataLakeCartRole:
@@ -438,6 +495,12 @@ Resources:
                                 Fn::GetAtt:
                                     - "DataLakeManifestService"
                                     - "Arn"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "cognito-idp:AdminListGroupsForUser"
+                        Resource:
+                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/", Ref: UserPoolId]]
             Roles:
                 -
                     Ref: "DataLakeCartRole"
@@ -456,8 +519,116 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeCartRole"
                     - "Arn"
-            Runtime: "nodejs6.10"
+            Runtime: "nodejs8.10"
             Timeout: "60"
+            Environment:
+                Variables:
+                    USER_POOL_ID: !Ref "UserPoolId"
+
+    DataLakePackageCrawlerRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-package-crawler-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service:
+                                - "glue.amazonaws.com"
+                        Action:
+                                - "sts:AssumeRole"
+            Path: "/"
+
+    DataLakePackageCrawlerPolicy:
+        Type: "AWS::IAM::ManagedPolicy"
+        Properties:
+            Description: "Data Lake policy for the package crawler."
+            PolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "glue:*"
+                            - "s3:GetBucketLocation"
+                            - "s3:ListBucket"
+                            - "s3:ListAllMyBuckets"
+                            - "s3:GetBucketAcl"
+                            - "ec2:DescribeVpcEndpoints"
+                            - "ec2:DescribeRouteTables"
+                            - "ec2:CreateNetworkInterface"
+                            - "ec2:DeleteNetworkInterface"
+                            - "ec2:DescribeNetworkInterfaces"
+                            - "ec2:DescribeSecurityGroups"
+                            - "ec2:DescribeSubnets"
+                            - "ec2:DescribeVpcAttribute"
+                            - "iam:ListRolePolicies"
+                            - "iam:GetRole"
+                            - "iam:GetRolePolicy"
+                        Resource: "*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:CreateBucket"
+                        Resource:
+                            - "arn:aws:s3:::aws-glue-*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:GetObject"
+                            - "s3:PutObject"
+                            - "s3:DeleteObject"
+                        Resource:
+                            - "arn:aws:s3:::aws-glue-*/*"
+                            - "arn:aws:s3:::*/*aws-glue-*/*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:GetObject"
+                        Resource:
+                            - "arn:aws:s3:::crawler-public*"
+                            - "arn:aws:s3:::aws-glue-*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:PutLogEvents"
+                        Resource:
+                            - "arn:aws:logs:*:*:/aws-glue/*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "ec2:CreateTags"
+                            - "ec2:DeleteTags"
+                        Resource:
+                            - "arn:aws:ec2:*:*:network-interface/*"
+                            - "arn:aws:ec2:*:*:security-group/*"
+                            - "arn:aws:ec2:*:*:instance/*"
+                        Condition:
+                            ForAllValues:StringEquals:
+                                aws:TagKeys: "aws-glue-service-resource"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "kms:Decrypt"
+                        Resource:
+                            Fn::GetAtt:
+                                - "DataLakeKmsKey"
+                                - "Arn"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:ListBucket"
+                            - "s3:GetObject"
+                        Resource:
+                            - !Join ["", ["arn:aws:s3:::data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", "/*" ]]
+            Roles:
+                -
+                    Ref: "DataLakePackageCrawlerRole"
+
 
     DataLakePackagesRole:
         Type: "AWS::IAM::Role"
@@ -530,10 +701,13 @@ Resources:
                     -
                         Effect: "Allow"
                         Action:
+                            - "s3:ListBucket"
                             - "s3:GetObject"
+                            - "s3:DeleteObject"
                             - "s3:PutObject"
                         Resource:
                             - !Join ["", ["arn:aws:s3:::data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", "/*" ]]
+                            - !Join ["", ["arn:aws:s3:::data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
                     -
                         Effect: "Allow"
                         Action:
@@ -546,6 +720,81 @@ Resources:
                             Fn::GetAtt:
                                 - "DataLakeKmsKey"
                                 - "Arn"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "glue:CreateDatabase"
+                            - "glue:DeleteDatabase"
+                            - "glue:GetDatabase"
+                            - "glue:GetDatabases"
+                            - "glue:UpdateDatabase"
+                            - "glue:CreateTable"
+                            - "glue:DeleteTable"
+                            - "glue:BatchDeleteTable"
+                            - "glue:UpdateTable"
+                            - "glue:GetTable"
+                            - "glue:GetTables"
+                            - "glue:BatchCreatePartition"
+                            - "glue:CreatePartition"
+                            - "glue:DeletePartition"
+                            - "glue:BatchDeletePartition"
+                            - "glue:UpdatePartition"
+                            - "glue:GetPartition"
+                            - "glue:GetPartitions"
+                            - "glue:BatchGetPartition"
+                            - "glue:DeleteCrawler"
+                            - "glue:StartCrawler"
+                            - "glue:StartCrawlerSchedule"
+                            - "glue:StopCrawler"
+                            - "glue:StopCrawlerSchedule"
+                            - "glue:CreateCrawler"
+                            - "glue:GetCrawler"
+                            - "glue:UpdateCrawler"
+                        Resource: "*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "athena:CancelQueryExecution"
+                            - "athena:GetCatalogs"
+                            - "athena:GetExecutionEngine"
+                            - "athena:GetExecutionEngines"
+                            - "athena:GetNamespace"
+                            - "athena:GetNamespaces"
+                            - "athena:GetQueryExecution"
+                            - "athena:GetQueryExecutions"
+                            - "athena:GetQueryResults"
+                            - "athena:GetTable"
+                            - "athena:GetTables"
+                            - "athena:RunQuery"
+                            - "athena:StartQueryExecution"
+                            - "athena:StopQueryExecution"
+                        Resource: "*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "s3:GetBucketLocation"
+                            - "s3:GetObject"
+                            - "s3:ListBucket"
+                            - "s3:ListBucketMultipartUploads"
+                            - "s3:ListMultipartUploadParts"
+                            - "s3:AbortMultipartUpload"
+                            - "s3:CreateBucket"
+                            - "s3:PutObject"
+                        Resource: "arn:aws:s3:::aws-athena-query-results-*"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "iam:PassRole"
+                        Resource:
+                            Fn::GetAtt:
+                                - "DataLakePackageCrawlerRole"
+                                - "Arn"
+                    -
+                        Effect: "Allow"
+                        Action:
+                            - "cognito-idp:AdminListGroupsForUser"
+                        Resource:
+                            !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/", Ref: UserPoolId]]
             Roles:
                 -
                     Ref: "DataLakePackagesRole"
@@ -564,8 +813,15 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakePackagesRole"
                     - "Arn"
-            Runtime: "nodejs6.10"
+            Runtime: "nodejs8.10"
             Timeout: "300"
+            Environment:
+                Variables:
+                    CRAWLER_ROLE_ARN: !GetAtt
+                        - DataLakePackageCrawlerRole
+                        - Arn
+                    ACCOUNT_ID: !Ref "AWS::AccountId"
+                    USER_POOL_ID: !Ref "UserPoolId"
 
     DataLakeProfileRole:
         Type: "AWS::IAM::Role"
@@ -655,7 +911,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeProfileRole"
                     - "Arn"
-            Runtime: "nodejs6.10"
+            Runtime: "nodejs8.10"
             Timeout: "300"
 
     DataLakeAuthorizerRole:
@@ -733,7 +989,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeAuthorizerRole"
                     - "Arn"
-            Runtime: "nodejs6.10"
+            Runtime: "nodejs8.10"
             Timeout: "60"
 
 Outputs:

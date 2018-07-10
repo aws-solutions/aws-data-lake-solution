@@ -1,0 +1,43 @@
+<div>
+    <h1>Group Management</h1>
+    <p>Manage the groups of the data lake. Begin by selecting a group you want to manage.</p>
+    <section class="awsui-util-mt-l">
+        <awsui-alert type={{awsUiAlert.type}} ng-show="awsUiAlert.show">
+            <span dom-region="header">{{awsUiAlert.header}}</span>
+            <span dom-region="content">{{awsUiAlert.content}}<button class="awsui-alert-dismiss-control awsui-alert-times-{{awsUiAlert.type}} awsui-button-as-link awsui-icon" aria-label="close" type="button" ng-click="dismissAwsUiAlert()"></button></span>
+        </awsui-alert>
+    </section>
+    <div class="clearfix">
+        <awsui-button variant="primary" text="Create Group" href="#admin/groups/create_group"></awsui-button>
+        <awsui-button-group class="awsui-util-f-r">
+            <awsui-button icon="refresh" ng-click="refresh()"></awsui-button>
+            <awsui-button icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/admin-guide/working-with-groups"></awsui-button>
+        </awsui-button-group>
+    </div>
+    <section class="awsui-util-mt-l">
+        <table class="grid">
+            <thead>
+                <th></th>
+                <th>Name</th>
+                <th>CreationDate</th>
+            </thead>
+            <tbody ng-show="groups.length > 0">
+                <tr ng-repeat="group in groups">
+                    <td style="width:25px;">
+                        <awsui-button icon="pencil" text="" variant="standalone-icon"
+                                      label="edit" href="#admin/groups/{{group.GroupName}}"></awsui-button>
+                    </td>
+                    <td>{{group.GroupName}}</td>
+                    <td>{{group.CreationDate}}</td>
+                </tr>
+            </tbody>
+            <tbody ng-show="groups.length == 0">
+                <tr>
+                    <td colspan="3">
+                        <label>No groups founds! <a href="#admin/groups/create_group">Create one now.</a></label>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+</div>

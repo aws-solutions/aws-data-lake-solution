@@ -1,7 +1,7 @@
 {
     "name": "datalake",
     "version": "0.1.0",
-    "description": "Data Lake Command Line Interface",
+    "description": "AWS Data Lake Commmand Line Interface",
     "main": "datalake.js",
     "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1"

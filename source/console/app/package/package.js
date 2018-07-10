@@ -22,11 +22,12 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
     });
 }])
 
-.controller('PackageCtrl', function($scope, $state, $stateParams, $sce, $_, $blockUI, $rootScope, authService,
-    dataPackageFactory, metadataFactory, datasetFactory, cartFactory, $http) {
+.controller('PackageCtrl', function($scope, $state, $stateParams, $sce, $_, $q, $blockUI, $rootScope, authService,
+    dataPackageFactory, metadataFactory, datasetFactory, cartFactory, adminGroupFactory, $http) {
 
     $scope.newpackage = {};
     $scope.pckg = {};
+    $scope.pckgName = '';
     $scope.newMetadata = [];
     $scope.newContent = [];
     $scope.newLink = [];
@@ -35,16 +36,31 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
     };
     $scope.pckgContent = [];
     $scope.pckgManifest = [];
+    $scope.glueCrawler = {};
+    $scope.glueTables = [];
     $scope.log = [];
     $scope.newPackage = true;
     $scope.invalidMetadata = false;
-    $scope.showCreateError = false;
-    $scope.createErrorMessage = '';
-    $scope.showError = false;
-    $scope.errorMessage = '';
-    $scope.showDeleteModal = false;
+
+    $scope.awsUiAlert = {}
+    $scope.awsUiAlert.show = false;
+    $scope.awsUiAlert.criticalError = false;
+    $scope.awsUiAlert.type = "";
+    $scope.awsUiAlert.header = "";
+    $scope.awsUiAlert.content = "";
+
+    $scope.deleteModal = {};
+    $scope.deleteModal.show = false;
+    $scope.deleteModal.type = "";
+    $scope.deleteModal.id = "";
+
     $scope.canEdit = false;
+    $scope.processing = false;
     $scope.metadataGovernance = [];
+
+    $scope.groups = {};
+    $scope.groups['all'] = false;
+    $scope.groups['groups'] = {};
 
     $scope.tabs = [{
         label: 'Overview',
@@ -55,6 +71,9 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
     }, {
         label: 'History',
         id: 'tab_history'
+    }, {
+        label: 'Integrations',
+        id: 'tab_integrations'
     }];
     $scope.currentTab = 'tab_overview';
 
@@ -62,26 +81,32 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
         $blockUI.start();
         dataPackageFactory.getDataPackage(id, function(err, datapackage) {
             if (err) {
-                console.log('error', err);
+                console.log('getDataPackage error', err);
+                showErrorAlert(['Failed to load the package', $stateParams.package_id, '. Check if it exists and if you have access to it'].join(' '), true);
                 $blockUI.stop();
                 return;
             }
 
             if (datapackage) {
                 $scope.pckg = datapackage;
+                $scope.pckgName = datapackage.name;
 
                 authService.getUserInfo().then(function(userinfo) {
                     if (userinfo.username === datapackage.owner || userinfo.role === 'Admin') {
                         $scope.canEdit = true;
                     }
 
-                    metadataFactory.listPackageMetadata(id, function(err, metadata) {
-                        if (err) {
-                            console.log('error', err);
-                            return;
-                        }
-
-                        setMetadataHistory(metadata);
+                    $q.all([
+                        getCrawlerInfo(id),
+                        getTablesInfo(id),
+                        listPackageMetadata(id),
+                        listPackageDatasets(id),
+                        listGroups()
+                    ])
+                    .then(values => {
+                        $scope.glueCrawler = values[0];
+                        $scope.glueTables = values[1];
+                        setMetadataHistory(values[2]);
                         $scope.log.push({
                             entrydt: $scope.pckg.created_at,
                             entries: [
@@ -90,37 +115,51 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
                             ]
                         });
 
-                        datasetFactory.listPackageDatasets(id, function(err, datasets) {
-                            if (err) {
-                                console.log('error', err);
-                                $blockUI.stop();
-                                return;
-                            }
+                        $scope.processing = ($scope.glueCrawler.status === 'RUNNING' || $scope.glueCrawler.status === 'STOPPING');
 
-                            $scope.pckgContent = $_.where(datasets, {
+                        if (values[3]) {
+                            $scope.pckgContent = $_.where(values[3], {
                                 type: 'dataset'
                             });
 
-                            $scope.tabs = [{
-                                label: 'Overview',
-                                id: 'tab_overview'
-                            }, {
-                                label: ['Content', '(', $scope.pckgContent
-                                    .length, ')'
-                                ].join(' '),
-                                id: 'tab_content'
-                            }, {
-                                label: 'History',
-                                id: 'tab_history'
-                            }];
-
-                            $scope.pckgManifest = $_.filter(datasets, function(d) {
-                                return d.type === 'manifest' && d.state_desc !=
-                                    'Processed';
+                            $scope.pckgManifest = $_.filter(values[3], function(d) {
+                                return d.type === 'manifest';
                             });
+                        }
+                        if ($scope.pckgContent.length == 0) {
+                            $scope.glueTables = values[3];
+                        }
 
-                            $blockUI.stop();
-                        });
+                        let groups = values[4];
+                        if ('groups' in datapackage && datapackage.groups.length > 0) {
+                            let allSelected = true;
+                            let membershipList = datapackage.groups;
+                            let processMembershipList = Object.keys(groups).map(function(key, index) {
+                                if (membershipList.indexOf(key) > -1) {
+                                    groups[key].visible = true;
+                                } else {
+                                    allSelected = false;
+                                }
+                            });
+                            $q.all(processMembershipList).then(function(results) {
+                                $scope.groups['all'] = allSelected;
+                                $scope.groups['groups'] = groups;
+                            });
+                        } else {
+                            $scope.groups['groups'] = groups;
+                        }
+
+                        if ($scope.pckgContent.length == 0) {
+                            $scope.glueTables = [];
+                        }
+                        $scope.tabs[1].label = `Content (${$scope.pckgContent.length})`;
+                        $scope.tabs[3].label = `Integrations (${$scope.glueTables.length})`;
+                        $blockUI.stop();
+                    })
+                    .catch(function(err) {
+                        console.log("getPackageDetails Error:", err);
+                        showErrorAlert(['Failed to load the package', $stateParams.package_id, '. Check if it exists and if you have access to it'].join(' '), true);
+                        $blockUI.stop();
                     });
 
                 }, function(msg) {
@@ -130,13 +169,82 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
 
             } else {
                 $scope.pckg = null;
-                $scope.showError = true;
-                $scope.errorMessage = ['The package', $stateParams.package_id,
-                    'is not available in the data lake.'
-                ].join(' ');
-                $blockUI.stop();
+                showErrorAlert(['The package', $stateParams.package_id, 'is not available in the data lake.'].join(' '), true);
+                return;
             }
         });
+    };
+
+    var listGroups = function() {
+        var deferred = $q.defer();
+        adminGroupFactory.listGroups(function(err, data) {
+            if (err) {
+                deferred.resolve({});
+            } else {
+                var groups = {};
+                let processGroups = data.Groups.map(function(group) {
+                    groups[group.GroupName] = {name: group.GroupName, visible: false};
+                });
+                Promise.all(processGroups).then(function(results) {
+                    deferred.resolve(groups);
+                });
+            }
+        });
+        return deferred.promise;
+    };
+
+    var getCrawlerInfo = function(packageId) {
+        var deferred = $q.defer();
+        dataPackageFactory.getCrawler(packageId, function(err, glueCrawler) {
+            if (err) {
+                deferred.resolve({
+                    name: "-",
+                    status: err.data.message,
+                    lastRun: "-"
+                });
+            } else {
+                deferred.resolve(glueCrawler);
+            }
+        });
+        return deferred.promise;
+    };
+
+    var getTablesInfo = function(packageId) {
+        var deferred = $q.defer();
+        dataPackageFactory.getTables(packageId, function(err, glueTables) {
+            if (err) {
+                deferred.resolve([]);
+            } else {
+                deferred.resolve(glueTables.tables);
+            }
+        });
+        return deferred.promise;
+    };
+
+    var listPackageMetadata = function(packageId) {
+        var deferred = $q.defer();
+        metadataFactory.listPackageMetadata(packageId, function(err, metadata) {
+            if (err) {
+                console.log('listPackageMetadata error', err);
+                deferred.resolve(null);
+            } else {
+                deferred.resolve(metadata);
+            }
+        });
+        return deferred.promise;
+    };
+
+    var listPackageDatasets = function(packageId) {
+        var deferred = $q.defer();
+        datasetFactory.listPackageDatasets(packageId, function(err, datasets) {
+            if (err) {
+                console.log('listPackageDatasets - error', err);
+                deferred.resolve(null);
+            } else {
+                deferred.resolve(datasets);
+            }
+        });
+        return deferred.promise;
     };
 
     var setMetadataHistory = function(metadata) {
@@ -196,18 +304,36 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
 
     };
 
-    var getRequiredMetadata = function() {
+    var loadCreatePackageParams = function() {
         $blockUI.start();
-        dataPackageFactory.listGovernanceRequirements(function(err, governance) {
-            if (err) {
-                console.log('error', err);
-                $blockUI.stop();
-                return;
-            }
 
-            $scope.metadataGovernance = $_.sortBy(governance, 'governance').reverse();
+        $q.all([
+            listGovernanceRequirements(),
+            listGroups()
+        ])
+        .then(values => {
+            $scope.metadataGovernance = values[0];
+            $scope.groups['groups'] = values[1];
+            $blockUI.stop();
+        })
+        .catch(function(err) {
+            console.log("loadCreatePackageParams Error:", err);
             $blockUI.stop();
         });
+    };
+
+    var listGovernanceRequirements = function() {
+        var deferred = $q.defer();
+
+        dataPackageFactory.listGovernanceRequirements(function(err, governance) {
+            if (err) {
+                deferred.resolve([]);
+            } else {
+                deferred.resolve($_.sortBy(governance, 'governance').reverse());
+            }
+        });
+
+        return deferred.promise;
     };
 
     var addManifest = function(cb) {
@@ -282,7 +408,7 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
 
                 datasetFactory.createDataset($stateParams.package_id, _dataset, function(err, dataset) {
                     if (err) {
-                        console.log('error', err);
+                        console.log('createDataset error', err);
                         return cb('error occurred updating package datasets.', null);
                     }
 
@@ -302,7 +428,7 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
                                 return cb(null, 'done processing files...');
                             });
 
-                    };
+                    }
 
                 });
             }
@@ -338,7 +464,7 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
             metadataFactory.createMetadata($stateParams.package_id, _meta,
                 function(err, data) {
                     if (err) {
-                        console.log('error', err);
+                        console.log('createMetadata error', err);
                         return cb('error occurred updating metadata.', null);
                     }
 
@@ -443,29 +569,25 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
         }
     };
 
-    $scope.addToCart = function(pckg) {
+    $scope.addToCart = function(package_id) {
         var _item = {
-            package_id: pckg.package_id
+            package_id: package_id
         };
 
         cartFactory.createCartItem(_item, function(err, data) {
             $blockUI.start();
+            $scope.dismissAwsUiAlert();
+
             if (err) {
-                console.log('error', err);
-                $scope.showError = true;
-                $scope.errorMessage =
-                    'An unexpected error occured when attempting to add package to your cart.';
-                $blockUI.stop();
+                console.log('createCartItem error', err);
+                showErrorAlert('An unexpected error occured when attempting to add package to your cart.');
                 return;
             }
 
             cartFactory.getCartCount(function(err, data) {
                 if (err) {
-                    console.log('error', err);
-                    $scope.showError = true;
-                    $scope.errorMessage =
-                        'An unexpected error occured when attempting to retrieve your updated cart items.';
-                    $blockUI.stop();
+                    console.log('getCartCount error', err);
+                    showErrorAlert('An unexpected error occured when attempting to retrieve your updated cart items.');
                     return;
                 }
 
@@ -478,6 +600,7 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
     $scope.createPackage = function(newpackage, isValid) {
         if (isValid) {
             $blockUI.start();
+            $scope.dismissAwsUiAlert();
 
             var _newpckg = {
                 package: newpackage
@@ -495,18 +618,11 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
                                 value: $scope.metadataGovernance[i].value
                             });
                         } else {
-                            $scope.showCreateError = true;
-                            $scope.createErrorMessage = [$scope.metadataGovernance[i].tag,
-                                'is a required field.'
-                            ].join(' ');
-                            $blockUI.stop();
+                            showErrorAlert([$scope.metadataGovernance[i].tag, 'is a required field.'].join(' '));
                             return;
                         }
                     } else {
-                        $scope.showCreateError = true;
-                        $scope.createErrorMessage = [$scope.metadataGovernance[i].tag, 'is a required field.'].join(
-                            ' ');
-                        $blockUI.stop();
+                        showErrorAlert([$scope.metadataGovernance[i].tag, 'is a required field.'].join(' '));
                         return;
                     }
 
@@ -526,130 +642,150 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
                 _newpckg.metadata = _metadata;
             }
 
-            dataPackageFactory.createDataPackage('new', _newpckg, function(err,
-                data) {
-                if (err) {
-                    console.log('error', err);
-                    $scope.showCreateError = true;
-                    if (err.data) {
-                        $scope.createErrorMessage = err.data;
-                    } else {
-                        $scope.createErrorMessage =
-                            'An unexpected error occured when attempting to save the new package.';
+            var groupSet = [];
+            let processGroups = Object.keys($scope.groups['groups']).map(function(group) {
+                if ($scope.groups['all'] || $scope.groups['groups'][group].visible) {
+                    groupSet.push(group);
+                }
+            });
+            Promise.all(processGroups).then(function(results) {
+                _newpckg.package.groups = groupSet;
+                dataPackageFactory.createDataPackage('new', _newpckg, function(err,
+                    data) {
+                    if (err) {
+                        console.log('createDataPackage error', err);
+                        if (err.data) {
+                            showErrorAlert(err.data);
+                        } else {
+                            showErrorAlert('An unexpected error occured when attempting to save the new package.');
+                        }
+                        return;
                     }
 
-                    $blockUI.stop();
-                    return;
-                }
-
-                $state.go('package', {
-                    package_id: data.package_id
+                    $state.go('package', {
+                        package_id: data.package_id
+                    });
                 });
             });
+
         }
     };
 
     $scope.updatePackage = function(pckg, isValid) {
         if (isValid) {
             $blockUI.start();
+            $scope.dismissAwsUiAlert();
 
-            dataPackageFactory.updateDataPackage($stateParams.package_id, pckg, function(err,
-                data) {
-                if (err) {
-                    console.log('error', err);
-                    $scope.showError = true;
-                    $scope.errorMessage =
-                        'An unexpected error occured when attempting to save the package.';
-                    $blockUI.stop();
-                    return;
+            var groupSet = [];
+            let processGroups = Object.keys($scope.groups['groups']).map(function(group) {
+                if ($scope.groups['all'] || $scope.groups['groups'][group].visible) {
+                    groupSet.push(group);
                 }
-
-                updatePackageMetadata(function(err, data) {
+            });
+            Promise.all(processGroups).then(function(results) {
+                pckg.groups = groupSet;
+                dataPackageFactory.updateDataPackage($stateParams.package_id, pckg, function(err,
+                    data) {
                     if (err) {
-                        console.log('error', err);
-                        $scope.showError = true;
-                        $scope.errorMessage =
-                            'An unexpected error occured when attempting to save the package.';
-                        $blockUI.stop();
+                        console.log('updateDataPackage error', err);
+                        showErrorAlert('An unexpected error occured when attempting to save the package.');
                         return;
                     }
 
-                    addFiles(function(err, data) {
+                    updatePackageMetadata(function(err, data) {
                         if (err) {
-                            console.log('error', err);
-                            $scope.showError = true;
-                            $scope.errorMessage =
-                                'An unexpected error occured when attempting to save the package.';
-                            $blockUI.stop();
+                            console.log('updatePackageMetadata error', err);
+                            showErrorAlert('An unexpected error occured when attempting to save the package.');
                             return;
                         }
 
-                        addManifest(function(err, data) {
+                        addFiles(function(err, data) {
                             if (err) {
-                                console.log('error', err);
-                                $scope.showError = true;
-                                $scope.errorMessage =
-                                    'An unexpected error occured when attempting to save the package.';
-                                $blockUI.stop();
+                                console.log('addFiles error', err);
+                                showErrorAlert('An unexpected error occured when attempting to save the package.');
                                 return;
                             }
 
-                            getPackageDetails($stateParams.package_id);
+                            addManifest(function(err, data) {
+                                if (err) {
+                                    console.log('addManifest error', err);
+                                    showErrorAlert('An unexpected error occured when attempting to save the package.');
+                                    return;
+                                }
+
+                                getPackageDetails($stateParams.package_id);
+                            });
 
                         });
-
                     });
-
                 });
-
             });
         }
     };
 
-    $scope.removeDataset = function(datasetid) {
-        $blockUI.start();
-        datasetFactory.deleteDataset($stateParams.package_id, datasetid, function(err, data) {
-            if (err) {
-                console.log('error', err);
-                $scope.showError = true;
-                $scope.errorMessage =
-                    'An unexpected error occured when attempting to delete the dataset from the package.';
-                $blockUI.stop();
-                return;
-            }
-
-            getPackageDetails($stateParams.package_id);
-        });
+    $scope.deleteDataset = function(datasetId, contentType) {
+        $scope.deleteModal.show = true;
+        $scope.deleteModal.type = (contentType === 'include-path') ? 'include-path' : 'dataset';
+        $scope.deleteModal.id = datasetId;
     };
 
-    $scope.removePackage = function() {
-        $scope.showDeleteModal = true;
-    };
-
-    $scope.closeDeleteModal = function() {
-        $scope.showDeleteModal = false;
+    $scope.deleteManifest = function(manifestId) {
+        $scope.deleteModal.show = true;
+        $scope.deleteModal.type = 'manifest';
+        $scope.deleteModal.id = manifestId;
     };
 
     $scope.deletePackage = function(packageId) {
+        $scope.deleteModal.show = true;
+        $scope.deleteModal.type = 'package';
+        $scope.deleteModal.id = packageId;
+    };
+
+    $scope.closeDeleteModal = function() {
+        $scope.deleteModal.show = false;
+        $scope.deleteModal.type = '';
+        $scope.deleteModal.id = '';
+    };
+
+    $scope.confirmDeleteModal = function() {
         $blockUI.start();
-        dataPackageFactory.deleteDataPackage(packageId, function(err, resp) {
-            $scope.showDeleteModal = false;
-            if (err) {
-                console.log('error', err);
-                $scope.showError = true;
-                $scope.errorMessage =
-                    'An unexpected error occured when attempting to delete the package.';
-                $blockUI.stop();
-                return;
-            }
+        $scope.dismissAwsUiAlert();
 
-            $blockUI.stop();
-            $state.go('search', {});
+        if ($scope.deleteModal.type === 'package') {
+            dataPackageFactory.deleteDataPackage($scope.deleteModal.id, function(err, resp) {
+                $scope.closeDeleteModal();
+                if (err) {
+                    console.log('deleteDataPackage error', err);
+                    showErrorAlert('An unexpected error occured when attempting to delete the package.');
+                    return;
+                }
 
-        });
+                cartFactory.deletePackage($scope.deleteModal.id, function(err, data) {
+                    if (err) {
+                        console.log('cartFactory.deletePackage error:', err);
+                    }
+
+                    $blockUI.stop();
+                    $state.go('search', {});
+                });
+            });
+
+        } else {
+            datasetFactory.deleteDataset($scope.pckg.package_id, $scope.deleteModal.id, function(err, data) {
+                $scope.closeDeleteModal();
+                if (err) {
+                    console.log('deleteDataset error', err);
+                    showErrorAlert('An unexpected error occured when attempting to delete the dataset from the package.');
+                    return;
+                }
+
+                getPackageDetails($scope.pckg.package_id);
+            });
+        }
     };
 
     $scope.refresh = function() {
+        $scope.dismissAwsUiAlert();
         getPackageDetails($stateParams.package_id);
     };
 
@@ -658,7 +794,83 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
         getPackageDetails($stateParams.package_id);
     } else {
         $scope.newPackage = true;
-        getRequiredMetadata();
+        loadCreatePackageParams();
     }
+
+    $scope.startCrawler = function(packageId) {
+        $scope.dismissAwsUiAlert();
+        $blockUI.start();
+        dataPackageFactory.startCrawler(packageId, function(err, data) {
+            if (err) {
+                showErrorAlert(err.data.message);
+                return;
+            }
+            else {
+                showSuccessAlert("Your request to run package's crawler was processed successfully.");
+            }
+        });
+    };
+
+    $scope.updateOrCreateCrawler = function(packageId) {
+        $scope.dismissAwsUiAlert();
+        $blockUI.start();
+        dataPackageFactory.updateOrCreateCrawler(packageId, function(err, data) {
+            if (err) {
+                showErrorAlert(err.data.message);
+                return;
+            }
+            else {
+                showSuccessAlert("Your request to update package's crawler was processed successfully.");
+            }
+        });
+    };
+
+    $scope.viewTable = function(tableUrl) {
+        $scope.dismissAwsUiAlert();
+        var newTab =  window.open();
+        newTab.location = tableUrl;
+        win.focus();
+    };
+
+    $scope.viewTableData = function(packageId, tableName) {
+        $scope.dismissAwsUiAlert();
+        var newTab =  window.open();
+        dataPackageFactory.viewTableData(packageId, tableName, function(err, data) {
+            if (err) {
+                showErrorAlert(err.data.message);
+                return;
+            }
+            else {
+                newTab.location = data.link;
+                win.focus();
+            }
+        });
+    };
+
+    $scope.dismissAwsUiAlert = function() {
+        $scope.awsUiAlert.show = false;
+        $scope.awsUiAlert.criticalError = false;
+        $scope.awsUiAlert.type = "";
+        $scope.awsUiAlert.header = "";
+        $scope.awsUiAlert.content = "";
+    };
+
+    var showSuccessAlert = function(message) {
+        $scope.awsUiAlert.type = "success";
+        $scope.awsUiAlert.header = "Success";
+        $scope.awsUiAlert.content = message;
+        $scope.awsUiAlert.show = true;
+        $scope.awsUiAlert.criticalError = false;
+        $blockUI.stop();
+    };
+
+    var showErrorAlert = function(message, critical = false) {
+        $scope.awsUiAlert.type = "error";
+        $scope.awsUiAlert.header = "Error";
+        $scope.awsUiAlert.content = message;
+        $scope.awsUiAlert.show = true;
+        $scope.awsUiAlert.criticalError = critical;
+        $blockUI.stop();
+    };
 
 });

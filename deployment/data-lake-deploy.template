@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "(SO0017) - The AWS CloudFormation template for deployment of the AWS Data Lake resources. Version 1"
+Description: "(SO0017) - The AWS CloudFormation template for deployment of the AWS Data Lake resources. Version %%VERSION%%"
 
 Parameters:
     AdministratorName:
@@ -12,18 +12,11 @@ Parameters:
         AllowedPattern: "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
     AccessIpAddress:
         Type: String
-        Description: IP address that can access the Amazon Elasticsearch Cluster
+        Description: IP CIDR range that can access the Amazon Elasticsearch Cluster
         MinLength: 9
         MaxLength: 18
         AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
         ConstraintDescription: "must be a valid IP CIDR range of the form x.x.x.x/x."
-    SendAnonymousData:
-        Description: Anonymous Metrics Request
-        Type: String
-        Default: "Yes"
-        AllowedValues:
-            - "Yes"
-            - "No"
 
 Metadata:
     AWS::CloudFormation::Interface:
@@ -35,11 +28,6 @@ Metadata:
                     - AdministratorName
                     - AdministratorEmail
                     - AccessIpAddress
-            -
-                Label:
-                    default: "Anonymous Metrics Request"
-                Parameters:
-                    - SendAnonymousData
         ParameterLabels:
             AdministratorName:
                 default: "Administrator name"
@@ -47,16 +35,17 @@ Metadata:
                 default: "Administrator email address"
             AccessIpAddress:
                 default: "Administrator Access IP for Elasticsearch cluster"
-            SendAnonymousData:
-                default: "Send Anonymous Usage Data"
 
 Mappings:
     SourceCode:
         General:
             S3Bucket: "%%BUCKET_NAME%%"
-            KeyPrefix: "data-lake/latest"
-Resources:
+            KeyPrefix: "data-lake/%%VERSION%%"
+    Solution:
+        Data:
+            SendAnonymousUsageData: "Yes"
 
+Resources:
     DataLakeServicesStack:
         DependsOn: "DataLakeUserPool"
         Type: "AWS::CloudFormation::Stack"
@@ -73,7 +62,6 @@ Resources:
             TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-storage.yaml"]]
             Parameters:
                 ESAccessIpAddress: !Ref AccessIpAddress
-
 
     DataLakeApiStack:
         DependsOn: "DataLakeServicesStack"
@@ -97,7 +85,7 @@ Resources:
                     - "Arn"
             Region:
                 - Ref: "AWS::Region"
-            appUrl: !GetAtt DataLakeStorageStack.Outputs.WebsiteURL
+            appUrl: !Join ["", ["http://datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", ".s3-website.", Ref: "AWS::Region", ".amazonaws.com"]]
             adminName: !Ref AdministratorName
             adminEmail: !Ref AdministratorEmail
             customAction: "createUserPool"
@@ -111,8 +99,8 @@ Resources:
                     - "Arn"
             Region:
                 - Ref: "AWS::Region"
-            defaultS3Bucket: !Join ["", ["data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId" ]]
-            appUrl: !GetAtt DataLakeStorageStack.Outputs.WebsiteURL
+            defaultS3Bucket: !Join ["", ["data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+            appUrl: !Join ["", ["http://datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", ".s3-website.", Ref: "AWS::Region", ".amazonaws.com"]]
             idp: !GetAtt DataLakeUserPool.UserPoolId
             auditLogging: false
             cartAccessExpiration: 14400
@@ -121,12 +109,27 @@ Resources:
             esindex: "data-lake"
             esurl: !Join ["", ["https://", !GetAtt DataLakeStorageStack.Outputs.EsCluster ]]
             kmsKeyId: !Join ["", ["alias/datalake-", Ref: "AWS::Region" ]]
-            anonymousData: !Ref SendAnonymousData
+            anonymousData: !FindInMap ["Solution", "Data", "SendAnonymousUsageData"]
             UUID: !GetAtt DataLakeUuid.UUID
             customAction: "loadAppConfig"
 
+    DataLakeS3Resources:
+        Type: "Custom::LoadLambda"
+        Properties:
+            ServiceToken:
+                Fn::GetAtt:
+                    - "DataLakeHelper"
+                    - "Arn"
+            Region:
+                - Ref: "AWS::Region"
+            customAction: "configureDatalakeBuckets"
+            dataLakeDefaultBucket: !Join ["", ["data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+            dataLakeWebsiteBucket: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+
     DataLakeWebsite:
-        DependsOn: "DataLakeApiStack"
+        DependsOn:
+            - "DataLakeS3Resources"
+            - "DataLakeApiStack"
         Type: "Custom::LoadLambda"
         Properties:
             ServiceToken:
@@ -137,11 +140,12 @@ Resources:
                 - Ref: "AWS::Region"
             sourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
             sourceS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "site"]]
-            destS3Bucket: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId" ]]
+            sourceSiteManifestS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-site-manifest.json"]]
+            destS3Bucket: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
             userPoolId: !GetAtt DataLakeUserPool.UserPoolId
             userPoolClientId: !GetAtt DataLakeUserPool.UserPoolClientId
             apigEndpoint: !Join ["", ["https://", !GetAtt DataLakeApiStack.Outputs.ApiId, ".execute-api.", Ref: "AWS::Region", ".amazonaws.com/prod" ]]
-            appVersion: "0.9.0"
+            appVersion: "%%VERSION%%"
             customAction: "configureWebsite"
 
     DataLakeSearchIndex:
@@ -169,6 +173,17 @@ Resources:
                 - Ref: "AWS::Region"
             customAction: "createUuid"
 
+    DataLakeGlueResources:
+        Type: "Custom::LoadLambda"
+        Properties:
+            ServiceToken:
+                Fn::GetAtt:
+                    - "DataLakeHelper"
+                    - "Arn"
+            Region:
+                - Ref: "AWS::Region"
+            customAction: "cleanDataLakeGlueResources"
+
     DataLakeAnonymousMetric:
         Type: "Custom::LoadLambda"
         Properties:
@@ -181,7 +196,7 @@ Resources:
             solutionId: "SO0017"
             UUID: !GetAtt DataLakeUuid.UUID
             version: "1"
-            anonymousData: !Ref SendAnonymousData
+            anonymousData: !FindInMap ["Solution", "Data", "SendAnonymousUsageData"]
             customAction: "sendMetric"
 
     DataLakeHelperRole:
@@ -222,6 +237,12 @@ Resources:
                             -
                                 Effect: "Allow"
                                 Action:
+                                    - "dynamodb:Scan"
+                                Resource:
+                                    - !Join ["", ["arn:aws:dynamodb:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":table/data-lake-packages"]]
+                            -
+                                Effect: "Allow"
+                                Action:
                                     - "cognito-idp:CreateUserPool"
                                     - "cognito-idp:AddCustomAttributes"
                                     - "cognito-idp:CreateUserPoolClient"
@@ -244,12 +265,37 @@ Resources:
                                 Effect: "Allow"
                                 Action:
                                     - "s3:PutObject"
+                                    - "s3:ListObjects"
+                                    - "s3:DeleteObject"
                                 Resource:
                                     - !Join ["", ["arn:aws:s3:::datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", "/*" ]]
+                            -
+                                Effect: "Allow"
+                                Action:
+                                    - "s3:CreateBucket"
+                                    - "s3:DeleteBucket"
+                                    - "s3:PutBucketPolicy"
+                                    - "s3:ListObjects"
+                                    - "s3:ListBucket"
+                                    - "s3:PutBucketWebsite"
+                                Resource:
+                                    - !Join ["", ["arn:aws:s3:::datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+                            -
+                                Effect: "Allow"
+                                Action:
+                                    - "s3:CreateBucket"
+                                    - "s3:PutBucketCORS"
+                                Resource:
+                                    - !Join ["", ["arn:aws:s3:::data-lake-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
+                            -
+                                Effect: "Allow"
+                                Action:
+                                    - "glue:DeleteDatabase"
+                                    - "glue:DeleteCrawler"
+                                Resource: "*"
 
     DataLakeHelper:
         Type: "AWS::Lambda::Function"
-        DependsOn: DataLakeStorageStack
         Properties:
             Code:
                 S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
@@ -262,7 +308,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeHelperRole"
                     - "Arn"
-            Runtime: "nodejs6.10"
+            Runtime: "nodejs8.10"
             Timeout: "300"
 
     DataLakeDeployment:
@@ -276,7 +322,7 @@ Resources:
 Outputs:
     ConsoleUrl:
         Description: "URL for the data lake console"
-        Value: !GetAtt DataLakeStorageStack.Outputs.WebsiteURL
+        Value: !Join ["", ["http://datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", ".s3-website.", Ref: "AWS::Region", ".amazonaws.com"]]
     UserPoolId:
         Description: "Id of data lake Amazon Cognito User Pool"
         Value: !GetAtt DataLakeUserPool.UserPoolId

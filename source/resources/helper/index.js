@@ -1,5 +1,5 @@
 /*********************************************************************************************************************
- *  Copyright 2016 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+ *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
  *                                                                                                                    *
  *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
  *  with the License. A copy of the License is located at                                                             *
@@ -21,10 +21,11 @@ const url = require('url');
 const moment = require('moment');
 const DynamoDBHelper = require('./lib/dynamodb-helper.js');
 const CognitoHelper = require('./lib/cognito-helper.js');
-const WebsiteHelper = require('./lib/website-helper.js');
 const ElasticsearchHelper = require('./lib/elasticsearch-helper.js');
+const GlueHelper = require('./lib/glue-helper.js');
+const S3Helper = require('./lib/s3-helper.js');
 const MetricsHelper = require('./lib/metrics-helper.js');
-const UUID = require('node-uuid');
+const UUID = require('uuid');
 
 /**
  * Request handler.
@@ -65,6 +66,28 @@ exports.handler = (event, context, callback) => {
             } else {
                 sendResponse(event, callback, context.logStreamName, 'SUCCESS');
             }
+
+        } else if (event.ResourceProperties.customAction === 'cleanDataLakeGlueResources') {
+            let _glueHelper = new GlueHelper();
+            _glueHelper.cleanDataLakeGlueResources(function(err, data) {
+                if (err) {
+                    console.log(err);
+                }
+
+                sendResponse(event, callback, context.logStreamName, 'SUCCESS');
+            });
+
+        } else if (event.ResourceProperties.customAction === 'configureDatalakeBuckets') {
+            let _s3Helper = new S3Helper();
+            _s3Helper.processDeleteEvent(event.ResourceProperties.dataLakeDefaultBucket,
+                event.ResourceProperties.dataLakeWebsiteBucket,
+                function(err, data) {
+                    if (err) {
+                        console.log(err);
+                    }
+
+                    sendResponse(event, callback, context.logStreamName, 'SUCCESS');
+                });
 
         } else {
             sendResponse(event, callback, context.logStreamName, 'SUCCESS');
@@ -124,11 +147,30 @@ exports.handler = (event, context, callback) => {
 
                     sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
                 });
-        } else if (event.ResourceProperties.customAction === 'configureWebsite') {
-            let _websiteHelper = new WebsiteHelper();
 
-            _websiteHelper.copyDataLakeSiteAssets(event.ResourceProperties.sourceS3Bucket,
-                event.ResourceProperties.sourceS3key, event.ResourceProperties.destS3Bucket,
+        } else if (event.ResourceProperties.customAction === 'configureDatalakeBuckets') {
+            let _s3Helper = new S3Helper();
+            _s3Helper.configureDataLakeBuckets(event.ResourceProperties.dataLakeDefaultBucket,
+                event.ResourceProperties.dataLakeWebsiteBucket,
+                function(err, data) {
+                    if (err) {
+                        responseData = {
+                            Error: 'Create data lake buckets failed.'
+                        };
+                        console.log([responseData.Error, ':\n', err].join(''));
+                    } else {
+                        responseStatus = 'SUCCESS';
+                        responseData = {};
+                    }
+
+                    sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+                });
+
+        } else if (event.ResourceProperties.customAction === 'configureWebsite') {
+            let _s3Helper = new S3Helper();
+
+            _s3Helper.copyDataLakeSiteAssets(event.ResourceProperties.sourceS3Bucket,
+                event.ResourceProperties.sourceS3key, event.ResourceProperties.sourceSiteManifestS3key, event.ResourceProperties.destS3Bucket,
                 event.ResourceProperties.userPoolId, event.ResourceProperties.userPoolClientId,
                 event.ResourceProperties.apigEndpoint, event.ResourceProperties.appVersion,
                 function(err, data) {

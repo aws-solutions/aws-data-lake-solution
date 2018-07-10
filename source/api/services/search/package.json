@@ -9,10 +9,10 @@
     "private": "true",
     "dependencies": {
         "elasticsearch": "*",
-        "http-aws-es": "2.0.4",
-        "aws-sdk": "*",
+        "http-aws-es": "*",
         "moment": "*",
-        "underscore": "*"
+        "underscore": "*",
+        "access-validator": "file:../../../resources/access-validator/"
     },
     "devDependencies": {
         "grunt": "^0.4.5",
@@ -20,15 +20,14 @@
         "grunt-pack": "0.1.*",
         "grunt-contrib-clean": "*",
         "chai": "*",
-        "sinon": "*",
+        "sinon": "^2.4.1",
         "sinon-chai": "*",
         "mocha": "*",
         "aws-sdk-mock": "*",
         "npm-run-all": "*"
     },
     "scripts": {
-        "pretest": "npm install",
-        "test": "mocha lib/*.spec.js",
+        "test": "NODE_PATH=./node_modules mocha lib/*.spec.js",
         "build-init": "rm -rf dist && rm -f archive.zip && mkdir dist && mkdir dist/lib",
         "build:copy": "cp index.js dist/ && cp -r lib/*.js dist/lib",
         "build:install": "cp package.json dist/ && cd dist && npm install --production",

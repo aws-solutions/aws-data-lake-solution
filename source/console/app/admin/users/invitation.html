@@ -3,7 +3,7 @@
 <section class="awsui-util-mt-l">
     <awsui-alert type="error" ng-show="showCreateError">
         <span dom-region="header">Service Error </span>
-        <span dom-region="content">An unexpected error occured when attempting to create the user invite.</span>
+        <span dom-region="content">An unexpected error occurred when attempting to create the user invite.</span>
     </awsui-alert>
     <form name="newInviteForm" novalidate ng-submit="createInvitation(newinvite, newInviteForm.$valid)">
         <awsui-control-group validation-message="{{ newInviteForm.name.$touched && newInviteForm.name.$invalid ? 'Name is required!' : '' }}" label="Name">
