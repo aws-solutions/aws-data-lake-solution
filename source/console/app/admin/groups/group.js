@@ -33,7 +33,8 @@ angular.module('dataLake.admin.group', ['dataLake.main', 'dataLake.utils', 'data
                 controller: 'AdminGroupCtrl'
             }
         },
-        adminAuthenticate: true
+        adminAuthenticate: true,
+        activeWithFederation: false
     });
 }])
 

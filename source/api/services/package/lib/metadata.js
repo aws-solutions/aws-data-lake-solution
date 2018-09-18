@@ -164,7 +164,7 @@ let metadata = (function() {
             if (!_.isEmpty(pckg)) {
                 //verify the requestor is the package owner or and admin to verify
                 //they can add metadata to the package
-                if (pckg.Item.owner == ticket.userid || ticket.role == 'Admin') {
+                if (pckg.Item.owner == ticket.userid || ticket.role.toLowerCase() == 'admin') {
                     // get the latest metadata entry
                     getLatestMetadataEntry(packageId, function(err, latest) {
 
@@ -299,7 +299,7 @@ let metadata = (function() {
             if (!_.isEmpty(pckg)) {
                 //verify the requestor is the package owner or and admin to verify
                 //they can add metadata to the package
-                if (pckg.Item.owner == ticket.userid || ticket.role == 'Admin') {
+                if (pckg.Item.owner == ticket.userid || ticket.role.toLowerCase() == 'admin') {
                     let params = {
                         TableName: ddbTable,
                         Key: {

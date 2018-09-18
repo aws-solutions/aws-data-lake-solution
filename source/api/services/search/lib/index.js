@@ -50,7 +50,7 @@ module.exports.respond = function(event, cb) {
         let _accessValidator = new AccessValidator();
         let _authToken = _accessValidator.getAuthToken(event.headers);
         let _authCheckPayload = {
-            authcheck: ['Admin', 'Member'],
+            authcheck: ['admin', 'member'],
             authorizationToken: _authToken
         };
 

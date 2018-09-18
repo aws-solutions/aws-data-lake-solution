@@ -96,7 +96,7 @@
                             </table>
                         </section>
                         <section class="awsui-util-mt-l">
-                            <awsui-alert type="error" dismiss="invalidMetadata=false" ng-show="invalidMetadata" dismissible="true">
+                            <awsui-alert type=error ng-show="invalidMetadata">
                                 <span dom-region="header">Metadata Error</span>
                                 <span dom-region="content">Metadata tags must be between 1 and 127 characters and can't contain spaces.</span>
                             </awsui-alert>
@@ -109,7 +109,7 @@
                                 </tr>
                                 <tr ng-repeat="metadata in newMetadata">
                                     <td>
-                                        <awsui-textfield ng-model="metadata.tag" placeholder="Name" input="validateTag(metadata)"></awsui-textfield>
+                                        <awsui-textfield ng-model="metadata.tag" placeholder="Name" input="validateTag()"></awsui-textfield>
                                     </td>
                                     <td width="25">
                                         <span ng-show="metadata.invalid" class="awsui-icon awsui-icon-big alert-exclamation-triangle"></span>

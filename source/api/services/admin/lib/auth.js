@@ -39,7 +39,6 @@ const dynamoConfig = {
     region: process.env.AWS_REGION
 };
 const docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
-const ddbTable = 'data-lake-settings';
 
 /**
  * Performs authorization function for data lake to determine if a user [via UI or API/CLI] has the access
@@ -122,7 +121,7 @@ let auth = (function() {
                 ValidateApiToken(event, authorizedRoles, cb);
             } else {
                 console.log('Not a valid Auth token');
-                return callback('Unauthorized', null);
+                return cb('Unauthorized', null);
             }
         });
 
@@ -235,13 +234,13 @@ let auth = (function() {
                             callback);
 
                     } else {
-                        _ticket.auth_status_reason = ['Access key is inactive:', _accessKeyId].join(' ');
+                        _ticket.auth_status_reason = ['Access key is inactive:', requestKeys.accesskey].join(' ');
                         console.log(_ticket);
                         return callback(_ticket, null);
                     }
 
                 } else {
-                    _ticket.auth_status_reason = ['Access key was not found in ddb:', _accessKeyId].join(' ');
+                    _ticket.auth_status_reason = ['Access key was not found in ddb:', requestKeys.accesskey].join(' ');
                     console.log(_ticket);
                     return callback(_ticket, null);
                 }
@@ -254,7 +253,7 @@ let auth = (function() {
             return callback(_ticket, null);
         }
 
-    };
+    }
 
     /**
      * Retrieves a user from the data lake Amazon Cognito user pool and validates that thier assigned
@@ -275,11 +274,12 @@ let auth = (function() {
             }
 
             // verify the user role is in the authorized roles
-            if (_.contains(authorizedRoles, user.role)) {
+            if (_.contains(authorizedRoles, user.role.toLowerCase())) {
                 ticket.auth_status = 'authorized';
                 ticket.auth_status_reason = 'User has the valid role for requested operation';
                 ticket.userid = username;
                 ticket.role = user.role;
+                ticket.user_status = user.userstatus;
                 return cb(null, ticket);
             } else {
                 ticket.auth_status_reason = 'User does not have a valid role for requested operation';
@@ -321,12 +321,13 @@ let auth = (function() {
 
                 if (user.accesskey === requestKeys.accesskey && validSignature) {
                     // verify the user role is in the authorized roles
-                    if (_.contains(authorizedRoles, user.role)) {
+                    if (_.contains(authorizedRoles, user.role.toLowerCase())) {
                         ticket.auth_status = 'authorized';
                         ticket.auth_status_reason =
                             'User has the valid role for requested operation';
                         ticket.userid = username;
                         ticket.role = user.role;
+                        ticket.user_status = user.userstatus;
                         return cb(null, ticket);
                     } else {
                         ticket.auth_status_reason =
@@ -463,10 +464,11 @@ let auth = (function() {
             let _user = {
                 user_id: data.Username,
                 sub: '',
-                role: '',
+                role: 'Member',
                 accesskey: '',
                 secretaccesskey: '',
-                enabled: data.Enabled
+                enabled: data.Enabled,
+                userstatus: data.UserStatus
             };
 
             let _sub = _.where(data.UserAttributes, {

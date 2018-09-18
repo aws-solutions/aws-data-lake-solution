@@ -52,14 +52,17 @@ module.exports.respond = function(event, cb) {
 
             cb(null, ticket);
         });
-    } else {
+    } else if (event.resource === '/admin/users/{user_id}/forgotPassword' && event.httpMethod === 'POST') {
+        let _ticket = {};
+        processRequest(event, _ticket, cb);
 
+    } else {
         let _accessValidator = new AccessValidator();
         let _authToken = _accessValidator.getAuthToken(event.headers);
         let _authPayload = {
             authorizationToken: _authToken
         };
-        let _roles = (event.resource === '/admin/groups' && event.httpMethod === 'GET') ? ['Admin', 'Member'] : ['Admin'];
+        let _roles = ((event.resource === '/admin/groups' || event.resource === '/admin/users/{user_id}') && event.httpMethod === 'GET') ? ['admin', 'member'] : ['admin'];
 
         _auth.authorizeRequest(_authPayload, _roles, function(err, ticket) {
             if (err) {
@@ -252,6 +255,7 @@ function processRequest(event, ticket, cb) {
 
     } else if (event.resource === '/admin/groups/membership/{user_id}' && event.httpMethod === 'GET') {
 
+        event.pathParameters.user_id = decodeURI(event.pathParameters.user_id);
         _operation = ['get ', event.pathParameters.user_id, ' groups'].join(' ');
         _group.getUserGroups(event.pathParameters.user_id, ticket, function(err, data) {
             if (err) {
@@ -274,6 +278,7 @@ function processRequest(event, ticket, cb) {
 
     } else if (event.resource === '/admin/groups/membership/{user_id}' && event.httpMethod === 'POST') {
 
+        event.pathParameters.user_id = decodeURI(event.pathParameters.user_id);
         _operation = ['update ', event.pathParameters.user_id, ' group membership'].join(' ');
         let _body = JSON.parse(event.body);
         _group.updateUserMembership(event.pathParameters.user_id, _body.groupSet, ticket, function(err, data) {
@@ -300,7 +305,7 @@ function processRequest(event, ticket, cb) {
         _user.inviteUser(event.body, function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -320,7 +325,7 @@ function processRequest(event, ticket, cb) {
         _user.getUsers(function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -336,11 +341,12 @@ function processRequest(event, ticket, cb) {
             }
         });
     } else if (event.resource === '/admin/users/{user_id}' && event.httpMethod === 'GET') {
+        event.pathParameters.user_id = decodeURI(event.pathParameters.user_id);
         _operation = ['retrieve data lake user', event.pathParameters.user_id].join(' ');
-        _user.getUser(event.pathParameters.user_id, function(err, data) {
+        _user.getUser(event.pathParameters.user_id, ticket, function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -356,11 +362,12 @@ function processRequest(event, ticket, cb) {
             }
         });
     } else if (event.resource === '/admin/users/{user_id}' && event.httpMethod === 'DELETE') {
+        event.pathParameters.user_id = decodeURI(event.pathParameters.user_id);
         _operation = ['delete data lake user', event.pathParameters.user_id].join(' ');
         _user.deleteUser(event.pathParameters.user_id, function(err, data) {
             if (err) {
                 console.log(err);
-                _response = buildOutput(500, err);
+                _response = buildOutput(err.code, err);
                 _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                     'failed/error',
                     function(err, resp) {
@@ -376,13 +383,14 @@ function processRequest(event, ticket, cb) {
             }
         });
     } else if (event.resource === '/admin/users/{user_id}' && event.httpMethod === 'PUT') {
+        event.pathParameters.user_id = decodeURI(event.pathParameters.user_id);
         let _body = JSON.parse(event.body);
         if (_body.operation === 'update') {
             _operation = ['update data lake user', event.pathParameters.user_id].join(' ');
             _user.updateUser(event.pathParameters.user_id, _body.user, function(err, data) {
                 if (err) {
                     console.log(err);
-                    _response = buildOutput(500, err);
+                    _response = buildOutput(err.code, err);
                     _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                         'failed/error',
                         function(err, resp) {
@@ -398,11 +406,12 @@ function processRequest(event, ticket, cb) {
                 }
             });
         } else if (_body.operation === 'disable') {
+            event.pathParameters.user_id = decodeURI(event.pathParameters.user_id);
             _operation = ['disable data lake user', event.pathParameters.user_id].join(' ');
             _user.disableUser(event.pathParameters.user_id, function(err, data) {
                 if (err) {
                     console.log(err);
-                    _response = buildOutput(500, err);
+                    _response = buildOutput(err.code, err);
                     _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                         'failed/error',
                         function(err, resp) {
@@ -418,11 +427,12 @@ function processRequest(event, ticket, cb) {
                 }
             });
         } else if (_body.operation === 'enable') {
+            event.pathParameters.user_id = decodeURI(event.pathParameters.user_id);
             _operation = ['enable data lake user', event.pathParameters.user_id].join(' ');
             _user.enableUser(event.pathParameters.user_id, function(err, data) {
                 if (err) {
                     console.log(err);
-                    _response = buildOutput(500, err);
+                    _response = buildOutput(err.code, err);
                     _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
                         'failed/error',
                         function(err, resp) {
@@ -441,6 +451,27 @@ function processRequest(event, ticket, cb) {
             _response = buildOutput(401, 'Invalid user operation requested.');
             return cb(_response, null);
         }
+
+    } else if (event.resource === '/admin/users/{user_id}/forgotPassword' && event.httpMethod === 'POST') {
+        event.pathParameters.user_id = decodeURI(event.pathParameters.user_id);
+        _operation = ['forgot password ', event.pathParameters.user_id].join(' ');
+        _user.forgotPassword(event.pathParameters.user_id, function(err, data) {
+            if (err) {
+                _response = buildOutput(err.code, err);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'failed/error',
+                    function(err, resp) {
+                        return cb(_response, null);
+                    });
+            } else {
+                _response = buildOutput(200, data);
+                _accessLog.logEvent(event.requestContext.requestId, servicename, ticket.userid, _operation,
+                    'success',
+                    function(err, resp) {
+                        return cb(null, _response);
+                    });
+            }
+        });
 
     } else if (event.resource === '/admin/settings/config' && event.httpMethod === 'GET') {
         _operation = 'list data lake configuration settings';
@@ -583,6 +614,7 @@ function processRequest(event, ticket, cb) {
             }
         });
     } else if (event.resource === '/admin/apikeys' && event.httpMethod === 'GET') {
+        event.queryStringParameters.user_id = decodeURI(event.queryStringParameters.user_id);
         _operation = ['retrieve api access key for user', event.queryStringParameters.user_id].join(' ');
         _apikey.getApiKeyByUserid(event.queryStringParameters.user_id, function(err, data) {
             if (err) {
@@ -623,6 +655,7 @@ function processRequest(event, ticket, cb) {
             }
         });
     } else if (event.resource === '/admin/apikeys/{access_key_id}' && event.httpMethod === 'DELETE') {
+        event.queryStringParameters.user_id = decodeURI(event.queryStringParameters.user_id);
         _operation = ['delete api access key', event.pathParameters.access_key_id, 'for user',
             event.queryStringParameters.user_id
         ].join(' ');
@@ -646,6 +679,7 @@ function processRequest(event, ticket, cb) {
                 }
             });
     } else if (event.resource === '/admin/apikeys/{access_key_id}' && event.httpMethod === 'POST') {
+        event.queryStringParameters.user_id = decodeURI(event.queryStringParameters.user_id);
         _operation = ['create an api access key for user', event.queryStringParameters.user_id].join(' ');
         _apikey.createApiKey(event.queryStringParameters.user_id, function(err, data) {
             if (err) {

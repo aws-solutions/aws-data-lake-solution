@@ -61,10 +61,10 @@ exports.handler = (event, context, callback) => {
                         console.log([responseData.Error, ':\n', err].join(''));
                     }
 
-                    sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+                    sendResponse(event, callback, context, responseStatus, responseData);
                 });
             } else {
-                sendResponse(event, callback, context.logStreamName, 'SUCCESS');
+                sendResponse(event, callback, context, 'SUCCESS');
             }
 
         } else if (event.ResourceProperties.customAction === 'cleanDataLakeGlueResources') {
@@ -74,7 +74,7 @@ exports.handler = (event, context, callback) => {
                     console.log(err);
                 }
 
-                sendResponse(event, callback, context.logStreamName, 'SUCCESS');
+                sendResponse(event, callback, context, 'SUCCESS');
             });
 
         } else if (event.ResourceProperties.customAction === 'configureDatalakeBuckets') {
@@ -86,16 +86,61 @@ exports.handler = (event, context, callback) => {
                         console.log(err);
                     }
 
-                    sendResponse(event, callback, context.logStreamName, 'SUCCESS');
+                    sendResponse(event, callback, context, 'SUCCESS');
+                });
+
+        } else if (event.ResourceProperties.customAction === 'updateElasticsearchDomainConfig') {
+            let _esHelper = new ElasticsearchHelper();
+            _esHelper.deleteResourcePolicy(event.ResourceProperties.logGroupPolicyName,
+                function(err, data) {
+                    if (err) {
+                        console.log(err);
+                    }
+
+                    sendResponse(event, callback, context, 'SUCCESS');
                 });
 
         } else {
-            sendResponse(event, callback, context.logStreamName, 'SUCCESS');
+            sendResponse(event, callback, context, 'SUCCESS');
         }
     }
 
     if (event.RequestType === 'Create') {
-        if (event.ResourceProperties.customAction === 'loadAppConfig') {
+        if (event.ResourceProperties.customAction === 'createUuid') {
+            responseStatus = 'SUCCESS';
+            responseData = {UUID: UUID.v4()};
+            sendResponse(event, callback, context, responseStatus, responseData);
+
+        } else if (event.ResourceProperties.customAction === 'sendMetric') {
+            if (event.ResourceProperties.anonymousData === 'Yes') {
+                let _metricsHelper = new MetricsHelper();
+                let _metric = {
+                    Solution: event.ResourceProperties.solutionId,
+                    UUID: event.ResourceProperties.UUID,
+                    TimeStamp: moment().utc().format('YYYY-MM-DD HH:mm:ss.S'),
+                    Data: {
+                        Version: event.ResourceProperties.version,
+                        Launch: moment().utc().format()
+                    }
+                };
+                _metricsHelper.sendAnonymousMetric(_metric, function(err, data) {
+                    if (err) {
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to send anonymous launch metric.'};
+                        console.log([responseData.Error, ':\n', err].join(''));
+                        return sendResponse(event, callback, context, responseStatus, responseData);
+                    }
+
+                    responseStatus = 'SUCCESS';
+                    responseData = {};
+                    sendResponse(event, callback, context, responseStatus, responseData);
+                });
+
+            } else {
+                sendResponse(event, callback, context, 'SUCCESS');
+            }
+
+        } else if (event.ResourceProperties.customAction === 'loadAppConfig') {
             let _ddbHelper = new DynamoDBHelper();
             let _config = {
                 defaultS3Bucket: event.ResourceProperties.defaultS3Bucket,
@@ -114,150 +159,263 @@ exports.handler = (event, context, callback) => {
 
             _ddbHelper.saveDataLakeConfigSettings(_config, function(err, setting) {
                 if (err) {
-                    responseData = {
-                        Error: 'Put on data-lake-settings DyanmoDB table call failed'
-                    };
+                    responseStatus = 'FAILED';
+                    responseData = {Error: 'Failed to persist data-lake-settings DyanmoDB table info.'};
                     console.log([responseData.Error, ':\n', err].join(''));
-                } else {
-                    responseStatus = 'SUCCESS';
-                    responseData = setting;
+                    return sendResponse(event, callback, context, responseStatus, responseData);
                 }
 
-                sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+                responseStatus = 'SUCCESS';
+                responseData = setting;
+                sendResponse(event, callback, context, responseStatus, responseData);
             });
+
+        } else if (event.ResourceProperties.customAction === 'createAppVariables') {
+            let _s3Helper = new S3Helper();
+
+            _s3Helper.createAppVariables(event.ResourceProperties.userPoolId,
+                event.ResourceProperties.userPoolClientId,
+                event.ResourceProperties.apigEndpoint,
+                event.ResourceProperties.appVersion,
+                event.ResourceProperties.destS3Bucket,
+                event.ResourceProperties.federatedLogin,
+                event.ResourceProperties.loginUrl,
+                event.ResourceProperties.logoutUrl,
+                function(err, data) {
+                    if (err) {
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to create app variables file.'};
+                        console.log([responseData.Error, ':\n', err].join(''));
+                        return sendResponse(event, callback, context, responseStatus, responseData);
+                    }
+
+                    responseStatus = 'SUCCESS';
+                    responseData = {};
+                    sendResponse(event, callback, context, responseStatus, responseData);
+                });
 
         } else if (event.ResourceProperties.customAction === 'createUserPool') {
             let _cognitoHelper = new CognitoHelper();
 
-            _cognitoHelper.createDataLakeUserPool(event.ResourceProperties.appUrl, event.ResourceProperties.adminName,
-                event.ResourceProperties.adminEmail,
+            _cognitoHelper.createDataLakeUserPool(
                 function(err, userPoolInfo) {
                     if (err) {
-                        responseData = {
-                            Error: 'Creation of data lake Cognito User Pool failed'
-                        };
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to create data lake Cognito User Pool.'};
                         console.log([responseData.Error, ':\n', err].join(''));
-                    } else {
-                        responseStatus = 'SUCCESS';
-                        responseData = {
-                            UserPoolId: userPoolInfo.UserPoolId,
-                            UserPoolClientId: userPoolInfo.UserPoolClientId
-                        };
+                        return sendResponse(event, callback, context, responseStatus, responseData);
                     }
 
-                    sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+                    responseStatus = 'SUCCESS';
+                    responseData = {
+                        UserPoolId: userPoolInfo.UserPoolId,
+                        UserPoolClientId: userPoolInfo.UserPoolClientId
+                    };
+                    sendResponse(event, callback, context, responseStatus, responseData);
+                });
+
+        } else if (event.ResourceProperties.customAction === 'createAdminUser') {
+            let _cognitoHelper = new CognitoHelper();
+
+            _cognitoHelper.createAdminUser(event.ResourceProperties.userPoolId,
+                event.ResourceProperties.adminName,
+                event.ResourceProperties.adminEmail,
+                event.ResourceProperties.appUrl,
+                function(err, newUserData) {
+                    if (err) {
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to create data lake Cognito Admin user.'};
+                        console.log([responseData.Error, ':\n', err].join(''));
+                        return sendResponse(event, callback, context, responseStatus, responseData);
+                    }
+
+                    responseStatus = 'SUCCESS';
+                    responseData = {
+                        Username: newUserData.Username
+                    };
+                    sendResponse(event, callback, context, responseStatus, responseData);
                 });
 
         } else if (event.ResourceProperties.customAction === 'configureDatalakeBuckets') {
             let _s3Helper = new S3Helper();
+
             _s3Helper.configureDataLakeBuckets(event.ResourceProperties.dataLakeDefaultBucket,
                 event.ResourceProperties.dataLakeWebsiteBucket,
                 function(err, data) {
                     if (err) {
-                        responseData = {
-                            Error: 'Create data lake buckets failed.'
-                        };
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to configure data lake buckets.'};
                         console.log([responseData.Error, ':\n', err].join(''));
-                    } else {
-                        responseStatus = 'SUCCESS';
-                        responseData = {};
+                        return sendResponse(event, callback, context, responseStatus, responseData);
                     }
 
-                    sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+                    responseStatus = 'SUCCESS';
+                    responseData = {};
+                    sendResponse(event, callback, context, responseStatus, responseData);
+                });
+
+        } else if (event.ResourceProperties.customAction === 'configureDatalakeBucketPolicy') {
+            let _s3Helper = new S3Helper();
+
+            _s3Helper.configureDatalakeBucketPolicy(event.ResourceProperties.dataLakeWebsiteBucket,
+                event.ResourceProperties.consoleCanonicalUserId,
+                function(err, data) {
+                    if (err) {
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to configure data lake website bucket policy.'};
+                        console.log([responseData.Error, ':\n', err].join(''));
+                        return sendResponse(event, callback, context, responseStatus, responseData);
+                    }
+
+                    responseStatus = 'SUCCESS';
+                    responseData = {};
+                    sendResponse(event, callback, context, responseStatus, responseData);
                 });
 
         } else if (event.ResourceProperties.customAction === 'configureWebsite') {
             let _s3Helper = new S3Helper();
 
             _s3Helper.copyDataLakeSiteAssets(event.ResourceProperties.sourceS3Bucket,
-                event.ResourceProperties.sourceS3key, event.ResourceProperties.sourceSiteManifestS3key, event.ResourceProperties.destS3Bucket,
-                event.ResourceProperties.userPoolId, event.ResourceProperties.userPoolClientId,
-                event.ResourceProperties.apigEndpoint, event.ResourceProperties.appVersion,
+                event.ResourceProperties.sourceS3key,
+                event.ResourceProperties.sourceSiteManifestS3key,
+                event.ResourceProperties.destS3Bucket,
                 function(err, data) {
                     if (err) {
-                        responseData = {
-                            Error: 'Copy of data lake website assets failed'
-                        };
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to copy data lake website assets.'};
                         console.log([responseData.Error, ':\n', err].join(''));
-                    } else {
-                        responseStatus = 'SUCCESS';
-                        responseData = {};
+                        return sendResponse(event, callback, context, responseStatus, responseData);
                     }
 
-                    sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+                    responseStatus = 'SUCCESS';
+                    responseData = {};
+                    sendResponse(event, callback, context, responseStatus, responseData);
                 });
 
-        } else if (event.ResourceProperties.customAction === 'createSearchIndex') {
+        } else if (event.ResourceProperties.customAction === 'configureSearch') {
             let _esHelper = new ElasticsearchHelper();
 
-            _esHelper.createSearchIndex(event.ResourceProperties.clusterUrl, event.ResourceProperties.searchIndex,
+            _esHelper.createSearchIndex(event.ResourceProperties.clusterUrl,
+                event.ResourceProperties.searchIndex,
                 function(err, data) {
                     if (err) {
-                        responseData = {
-                            Error: 'Creating the data lake search index failed'
-                        };
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to create search index'};
                         console.log([responseData.Error, ':\n', err].join(''));
-                    } else {
-                        responseStatus = 'SUCCESS';
-                        responseData = {};
+                        return sendResponse(event, callback, context, responseStatus, responseData);
                     }
 
-                    sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+                    responseStatus = 'SUCCESS';
+                    responseData = {};
+                    sendResponse(event, callback, context, responseStatus, responseData);
                 });
 
-        } else if (event.ResourceProperties.customAction === 'createUuid') {
-            responseStatus = 'SUCCESS';
-            responseData = {
-                UUID: UUID.v4()
-            };
-            sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+        } else if (event.ResourceProperties.customAction === 'updateElasticsearchDomainConfig') {
+            let _cognitoHelper = new CognitoHelper();
+            let _esHelper = new ElasticsearchHelper();
 
-        } else if (event.ResourceProperties.customAction === 'sendMetric') {
-            let _metricsHelper = new MetricsHelper();
-
-            let _metric = {
-                Solution: event.ResourceProperties.solutionId,
-                UUID: event.ResourceProperties.UUID,
-                TimeStamp: moment().utc().format('YYYY-MM-DD HH:mm:ss.S'),
-                Data: {
-                    Version: event.ResourceProperties.version,
-                    Launch: moment().utc().format()
-                }
-            };
-
-            if (event.ResourceProperties.anonymousData === 'Yes') {
-                _metricsHelper.sendAnonymousMetric(_metric, function(err, data) {
+            _cognitoHelper.createUserPoolDomain(event.ResourceProperties.cognitoDomain,
+                event.ResourceProperties.userPoolId,
+                function(err, data) {
                     if (err) {
-                        responseData = {
-                            Error: 'Sending anonymous launch metric failed'
-                        };
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to create data lake Cognito Domain.'};
                         console.log([responseData.Error, ':\n', err].join(''));
-                    } else {
-                        responseStatus = 'SUCCESS';
-                        responseData = {};
+                        return sendResponse(event, callback, context, responseStatus, responseData);
                     }
 
-                    sendResponse(event, callback, context.logStreamName, responseStatus, responseData);
+                    _esHelper.updateElasticsearchDomainConfig(event.ResourceProperties.identityPoolId,
+                        event.ResourceProperties.roleArn,
+                        event.ResourceProperties.userPoolId,
+                        event.ResourceProperties.logGroupArn,
+                        event.ResourceProperties.logGroupPolicyName,
+                        function(err, data) {
+                            if (err) {
+                                responseStatus = 'FAILED';
+                                responseData = {Error: 'Failed to update elasticsearch domain configuration.'};
+                                console.log([responseData.Error, ':\n', err].join(''));
+                                return sendResponse(event, callback, context, responseStatus, responseData);
+                            }
+
+                            responseStatus = 'SUCCESS';
+                            responseData = {};
+                            sendResponse(event, callback, context, responseStatus, responseData);
+                        });
                 });
-            } else {
-                sendResponse(event, callback, context.logStreamName, 'SUCCESS');
-            }
+
+        } else if (event.ResourceProperties.customAction === 'federateAccess') {
+            let _cognitoHelper = new CognitoHelper();
+            let _esHelper = new ElasticsearchHelper();
+
+            _cognitoHelper.addFederationCustomAttributes(event.ResourceProperties.userPoolId,
+                function(err, data) {
+                    if (err) {
+                        responseStatus = 'FAILED';
+                        responseData = {Error: 'Failed to add federation custom attributes to the user pool.'};
+                        console.log([responseData.Error, ':\n', err].join(''));
+                        return sendResponse(event, callback, context, responseStatus, responseData);
+                    }
+
+                    _cognitoHelper.createIdentityProvider(event.ResourceProperties.adFsHostname,
+                        event.ResourceProperties.userPoolId,
+                        function(err, data) {
+                            if (err) {
+                                responseStatus = 'FAILED';
+                                responseData = {Error: 'Failed to create data lake Cognito identity provider'};
+                                console.log([responseData.Error, ':\n', err].join(''));
+                                return sendResponse(event, callback, context, responseStatus, responseData);
+                            }
+
+                            _cognitoHelper.updateUserPoolClient(event.ResourceProperties.adFsHostname,
+                                event.ResourceProperties.userPoolId,
+                                event.ResourceProperties.userPoolClientId,
+                                event.ResourceProperties.consoleUrl,
+                                function(err, userPoolInfo) {
+                                    if (err) {
+                                        responseStatus = 'FAILED';
+                                        responseData = {Error: 'Creation of data lake Cognito create identityProvider'};
+                                        console.log([responseData.Error, ':\n', err].join(''));
+                                        return sendResponse(event, callback, context, responseStatus, responseData);
+                                    }
+
+                                    _esHelper.federateKibanaAccess(event.ResourceProperties.userPoolId,
+                                        event.ResourceProperties.adFsHostname,
+                                        function(err, data) {
+                                            if (err) {
+                                                responseStatus = 'FAILED';
+                                                responseData = {Error: 'Failed to federate kibana access'};
+                                                console.log([responseData.Error, ':\n', err].join(''));
+                                                return sendResponse(event, callback, context, responseStatus, responseData);
+                                            }
+
+                                            responseStatus = 'SUCCESS';
+                                            var region = context.invokedFunctionArn.split(":")[3];
+                                            responseData = {IdentityProvidersUrl: `https://console.aws.amazon.com/cognito/users/?region=${region}#/pool/${event.ResourceProperties.userPoolId}/federation-identity-providers`};
+                                            if (region !== 'us-east-1') {
+                                                responseData.IdentityProvidersUrl = responseData.IdentityProvidersUrl.replace('https://console.aws.amazon.com', `https://${region}.console.aws.amazon.com`);
+                                            }
+                                            sendResponse(event, callback, context, responseStatus, responseData);
+                                        });
+                                });
+                        });
+                });
 
         } else {
-            sendResponse(event, callback, context.logStreamName, 'SUCCESS');
+            sendResponse(event, callback, context, 'SUCCESS');
         }
     }
-
 };
 
 /**
  * Sends a response to the pre-signed S3 URL
  */
-let sendResponse = function(event, callback, logStreamName, responseStatus, responseData) {
+let sendResponse = function(event, callback, context, responseStatus, responseData, physicalResourceId, reason) {
+    var region = context.invokedFunctionArn.split(":")[3];
+    var cwLogsUrl = `https://console.aws.amazon.com/cloudwatch/home?region=${region}#logEventViewer:group=${context.logGroupName};stream=${context.logStreamName}`;
     const responseBody = JSON.stringify({
         Status: responseStatus,
-        Reason: `See the details in CloudWatch Log Stream: ${logStreamName}`,
-        PhysicalResourceId: logStreamName,
+        Reason: reason || cwLogsUrl,
+        PhysicalResourceId: physicalResourceId || event.LogicalResourceId,
         StackId: event.StackId,
         RequestId: event.RequestId,
         LogicalResourceId: event.LogicalResourceId,

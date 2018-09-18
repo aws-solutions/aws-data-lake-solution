@@ -33,7 +33,8 @@ angular.module('dataLake.admin.invitation', ['dataLake.main', 'dataLake.utils', 
                 controller: 'AdminInvitationCtrl'
             }
         },
-        adminAuthenticate: true
+        adminAuthenticate: true,
+        activeWithFederation: false
     });
 }])
 

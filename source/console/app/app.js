@@ -53,7 +53,7 @@ angular.module('dataLake', [
 
 .config(function($stateProvider, $urlRouterProvider) {
 
-    $urlRouterProvider.otherwise('/signin');
+    $urlRouterProvider.otherwise('/dashboard');
 })
 
 .run(function($rootScope, $state, authService) {
@@ -61,27 +61,36 @@ angular.module('dataLake', [
         if (toState.authenticate) {
             authService.isAuthenticated().then(function(authenticated) {
                 if (!authenticated) {
-                    // User isn’t authenticated
                     $state.transitionTo('signin');
-                    event.preventDefault();
+                } else if (FEDERATED_LOGIN && !toState.activeWithFederation) {
+                    $state.transitionTo('dashboard');
                 }
+                event.preventDefault();
+
             }).catch(function(result) {
                 // User isn’t authenticated
                 $state.transitionTo('signin');
                 event.preventDefault();
             });
+
         } else if (toState.adminAuthenticate) {
             authService.isAdminAuthenticated().then(function(authenticated) {
                 if (!authenticated) {
-                    // User isn’t authorized to access admin
                     $state.transitionTo('signin');
-                    event.preventDefault();
+                } else if (FEDERATED_LOGIN && !toState.activeWithFederation) {
+                    $state.transitionTo('dashboard');
                 }
+                event.preventDefault();
+
             }).catch(function(result) {
-                // User isn’t authenticated
+                // Admin isn’t authenticated
                 $state.transitionTo('signin');
                 event.preventDefault();
             });
+
+        } else if (FEDERATED_LOGIN && !toState.activeWithFederation) {
+            $state.transitionTo('signin');
+            event.preventDefault();
         }
     });
 });

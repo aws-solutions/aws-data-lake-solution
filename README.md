@@ -8,9 +8,37 @@ For the full solution overview visit [Data Lake on AWS](https://aws.amazon.com/a
 
 For help when using the data lake solution, visit the [online help guide](http://docs.awssolutionsbuilder.com/data-lake/).
 
-## File StructureThe data lake project consists of microservices that facilitate the functional areas of the solution. These microservices are deployed to a serverless environment in AWS Lambda.<pre>|-deployment/ [folder containing templates and build scripts]|-source/  |-api/    |-authorizer/ [custom authorizer for api gateway]    |-services/      |-admin/ [microservice for data lake administrative functionality]      |-cart/ [microservice for data lake cart functionality]      |-logging/ [microservice for data lake audit logging]      |-manifest/ [microservice for data lake manifest processing]      |-package/ [microservice for data lake package functionality]      |-profile/ [microservice for data lake user profile functionality]      |-search/ [microservice for data lake search functionality]  |-cli/ [data lake command line interface]  |-console/ [data lake angularjs management console]  |-resource/
-    |-access-validator/ [auxiliar module used to validate granular permissions]    |-helper/ [custom helper for CloudFormation deployment template]</pre>
-Each microservice follows the structure of:<pre>|-service-name/  |-lib/    |-[service module libraries and unit tests]  |-index.js [injection point for microservice]  |-package.json</pre>
+## File Structure
+The data lake project consists of microservices that facilitate the functional areas of the solution. These microservices are deployed to a serverless environment in AWS Lambda.
+
+<pre>
+|-deployment/ [folder containing templates and build scripts]
+|-source/
+  |-api/
+    |-authorizer/ [custom authorizer for api gateway]
+    |-services/
+      |-admin/ [microservice for data lake administrative functionality]
+      |-cart/ [microservice for data lake cart functionality]
+      |-logging/ [microservice for data lake audit logging]
+      |-manifest/ [microservice for data lake manifest processing]
+      |-package/ [microservice for data lake package functionality]
+      |-profile/ [microservice for data lake user profile functionality]
+      |-search/ [microservice for data lake search functionality]
+  |-cli/ [data lake command line interface]
+  |-console/ [data lake angularjs management console]
+  |-resource/
+    |-access-validator/ [auxiliar module used to validate granular permissions]
+    |-helper/ [custom helper for CloudFormation deployment template]
+</pre>
+Each microservice follows the structure of:
+
+<pre>
+|-service-name/
+  |-lib/
+    |-[service module libraries and unit tests]
+  |-index.js [injection point for microservice]
+  |-package.json
+</pre>
 
 ## Getting Started
 
@@ -59,8 +87,8 @@ aws s3 cp ./dist s3://$DEPLOY_BUCKET/data-lake/latest --recursive --acl bucket-o
 ```
 
 #### 07. Deploy the data lake solution:
-* From your designated Amazon S3 bucket where you uploaded the deployment assets, copy the link location for the data-lake-deploy.template.
-* Using AWS CloudFormation, launch the data lake solution stack using the copied Amazon S3 link for the data-lake-deploy.template.
+* From your designated Amazon S3 bucket where you uploaded the deployment assets, copy the link location for the data-lake-deploy.template or data-lake-deploy-federated.template.
+* Using AWS CloudFormation, launch the data lake solution stack using the copied Amazon S3 link for the data-lake-deploy.template or data-lake-deploy-federated.template.
 
 > Currently, the data lake solution can be deployed in the following regions: [ us-east-1, us-east-2, us-west-2, eu-west-1, eu-west-2, eu-central-1, ap-northeast-1, ap-northeast-2, ap-southeast-2, ap-south-1 ]
 

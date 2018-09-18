@@ -18,10 +18,11 @@
 <section class="awsui-util-mt-l" ng-cloak ng-show="user_found">
     <form name="userEditForm" novalidate ng-submit="modifyUser(user, userEditForm.$valid)">
         <div class="awsui-util-mb-xl">
-            <awsui-button text="Cancel" href="#/admin/users"></awsui-button>
-            <awsui-button variant="primary" text="Save" ng-click="updateUser('update')"></awsui-button>
-            <awsui-button variant="danger" text="Disable User" ng-show="user.enabled" ng-click="updateUser('disable')"></awsui-button>
-            <awsui-button variant="" text="Enable User" ng-show="!user.enabled" ng-click="updateUser('enable')"></awsui-button>
+            <awsui-button text="Cancel" href="#/admin/users" ng-show="!federatedLogin"></awsui-button>
+            <awsui-button text="Back" href="#/admin/users" ng-show="federatedLogin"></awsui-button>
+            <awsui-button variant="primary" text="Save" ng-click="updateUser('update')" ng-show="!federatedLogin"></awsui-button>
+            <awsui-button variant="danger" text="Disable User" ng-show="user.enabled && !federatedLogin" ng-click="updateUser('disable')"></awsui-button>
+            <awsui-button variant="" text="Enable User" ng-show="!user.enabled && !federatedLogin" ng-click="updateUser('enable')"></awsui-button>
             <awsui-button class="awsui-util-f-r" icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/admin-guide/working-with-users"></awsui-button>
         </div>
         <awsui-tabs tabs="tabs" ng-model="currentTab">
@@ -30,26 +31,29 @@
                     <awsui-control-group label="User ID">
                         {{user.user_id}}
                     </awsui-control-group>
-                    <awsui-control-group validation-message="" label="Name">
+                    <awsui-control-group validation-message="" label="Name" ng-show="!federatedLogin">
                         {{user.display_name}}
                     </awsui-control-group>
                     <awsui-control-group validation-message="" label="Email">
                         {{user.email}}
                     </awsui-control-group>
-                    <awsui-control-group validation-message="" label="Role">
+                    <awsui-control-group validation-message="" label="Role" ng-show="federatedLogin">
+                        {{user.role}}
+                    </awsui-control-group>
+                    <awsui-control-group validation-message="" label="Role" ng-show="!federatedLogin">
                         <awsui-select data-disabled="false"  ng-model="user.role" placeholder="Select a role..." items="roles"></awsui-select>
                     </awsui-control-group>
-                    <awsui-control-group validation-message="" label="Groups">
+                    <awsui-control-group validation-message="" label="Groups" ng-show="!federatedLogin">
                         <awsui-checkbox ng-model="groups['all']" label="All"></awsui-checkbox>
                         <awsui-checkbox ng-repeat="group in groups['groups']" ng-model="group.visible" checked="groups['all'] ? true : group.visible" disabled="groups['all'] ? 'disabled' : ''" label="{{group.name}}"></awsui-checkbox>
                     </awsui-control-group>
-                    <awsui-control-group label="Created">
+                    <awsui-control-group label="Created" ng-show="!federatedLogin">
                         {{user.created_at | moment:"MMM Do YYYY, h:mm:ss a"}}
                     </awsui-control-group>
-                    <awsui-control-group label="Last Updated">
+                    <awsui-control-group label="Last Updated" ng-show="!federatedLogin">
                         {{user.updated_at | moment:"MMM Do YYYY, h:mm:ss a"}}
                     </awsui-control-group>
-                    <awsui-expandable-section class="awsui-util-mt-l" header="Delete User">
+                    <awsui-expandable-section class="awsui-util-mt-l" header="Delete User" ng-show="!federatedLogin">
                         <awsui-button class="awsui-util-mt-m" variant="danger" text="Delete" ng-click="removeUser()"></awsui-button>
                     </awsui-expandable-section>
                 </div>

@@ -31,7 +31,8 @@ angular.module('dataLake.confirm', [])
                 templateUrl: 'confirm/confirm.html',
                 controller: 'ConfirmCtrl'
             }
-        }
+        },
+        activeWithFederation: false
     });
 }])
 

@@ -33,7 +33,8 @@ angular.module('dataLake.profile.changepassword', ['dataLake.main', 'dataLake.ut
                 controller: 'ChangePasswordCtrl'
             }
         },
-        authenticate: true
+        authenticate: true,
+        activeWithFederation: false
     });
 }])
 

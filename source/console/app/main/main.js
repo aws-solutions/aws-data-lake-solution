@@ -24,15 +24,19 @@ angular.module('dataLake.main', ['dataLake.factory.cart'])
     $scope.username = '';
     $scope.cartCount = 0;
     $scope.showadmin = false;
+    $scope.showUsers = false;
+    $scope.showGroups = false;
 
     authService.getUserInfo().then(function(result) {
         $rootScope.username = result.display_name;
         $scope.username = $rootScope.username;
-        if (result.role !== 'Admin') {
+        if (result.role.toLowerCase() !== 'admin') {
             var myEl = angular.element(document.querySelector('#adminMenu'));
             myEl.empty();
         } else {
             $scope.showadmin = true;
+            $scope.showUsers = true;
+            $scope.showGroups = !FEDERATED_LOGIN;
         }
     }, function(msg) {
         console.log('Unable to retrieve the user session.');

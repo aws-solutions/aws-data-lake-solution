@@ -9,7 +9,7 @@
 # Paramenters:
 #  - source-bucket-base-name: Name for the S3 bucket location where the template will source the Lambda
 #    code from. The template will append '-[region_name]' to this bucket name.
-#    For example: ./build-s3-dist.sh solutions v2.0.0
+#    For example: ./build-s3-dist.sh solutions v2.1
 #    The template will then expect the source code to be located in the solutions-[region_name] bucket
 #
 #  - version-code: version of the package
@@ -49,6 +49,8 @@ echo "[Packing] Templates"
 echo "------------------------------------------------------------------------------"
 echo "cp $template_dir/data-lake-deploy.yaml $dist_dir/data-lake-deploy.template"
 cp $template_dir/data-lake-deploy.yaml $dist_dir/data-lake-deploy.template
+echo "cp $template_dir/data-lake-deploy-federated.yaml $dist_dir/data-lake-deploy-federated.template"
+cp $template_dir/data-lake-deploy-federated.yaml $dist_dir/data-lake-deploy-federated.template
 echo "cp $template_dir/data-lake-storage.yaml $dist_dir"
 cp $template_dir/data-lake-storage.yaml $dist_dir
 echo "cp $template_dir/data-lake-services.yaml $dist_dir"
@@ -64,6 +66,15 @@ echo "Updating code source version in template with $2"
 replace="s/%%VERSION%%/$2/g"
 echo "sed -i '' -e $replace $dist_dir/data-lake-deploy.template"
 sed -i '' -e $replace $dist_dir/data-lake-deploy.template
+
+echo "Updating code source bucket in template with $1"
+replace="s/%%BUCKET_NAME%%/$1/g"
+echo "sed -i '' -e $replace $dist_dir/data-lake-deploy-federated.template"
+sed -i '' -e $replace $dist_dir/data-lake-deploy-federated.template
+echo "Updating code source version in template with $2"
+replace="s/%%VERSION%%/$2/g"
+echo "sed -i '' -e $replace $dist_dir/data-lake-deploy-federated.template"
+sed -i '' -e $replace $dist_dir/data-lake-deploy-federated.template
 
 echo "------------------------------------------------------------------------------"
 echo "[Rebuild] Console"

@@ -580,6 +580,50 @@ Resources:
                         httpMethod: "POST"
                         type: "aws_proxy"
                         credentials: !GetAtt DataLakeLambdaExecRole.Arn
+                  /admin/users/{user_id}/forgotPassword:
+                    options:
+                      consumes:
+                      - "application/json"
+                      produces:
+                      - "application/json"
+                      responses:
+                        "200":
+                          description: "200 response"
+                          schema:
+                            $ref: "#/definitions/Empty"
+                          headers:
+                            Access-Control-Allow-Origin:
+                              type: "string"
+                            Access-Control-Allow-Methods:
+                              type: "string"
+                            Access-Control-Allow-Headers:
+                              type: "string"
+                      x-amazon-apigateway-integration:
+                        responses:
+                          default:
+                            statusCode: "200"
+                            responseParameters:
+                              method.response.header.Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+                              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,x-api-key,x-amz-security-token,Auth'"
+                              method.response.header.Access-Control-Allow-Origin: "'*'"
+                        requestTemplates:
+                          application/json: "{\"statusCode\":200}"
+                        passthroughBehavior: "when_no_match"
+                        type: "mock"
+                    x-amazon-apigateway-any-method:
+                      produces:
+                      - "application/json"
+                      responses:
+                        "200":
+                          description: "200 response"
+                          schema:
+                            $ref: "#/definitions/Empty"
+                      x-amazon-apigateway-integration:
+                        uri: !Join ["", ["arn:aws:apigateway:", Ref: "AWS::Region",":lambda:path/2015-03-31/functions/", Ref: "AdminArn", "/invocations"]]
+                        passthroughBehavior: "when_no_match"
+                        httpMethod: "POST"
+                        type: "aws_proxy"
+                        credentials: !GetAtt DataLakeLambdaExecRole.Arn
                   /cart:
                     options:
                       consumes:

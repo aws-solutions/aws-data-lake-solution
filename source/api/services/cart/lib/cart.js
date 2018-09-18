@@ -126,7 +126,7 @@ let cart = (function() {
                         }
 
                         // Skip if the user does not have access to the package
-                        if (ticket.role != 'Admin') {
+                        if (ticket.role.toLowerCase() != 'admin') {
                             let user_groups = [];
                             data.Groups.map(group => {user_groups.push(group.GroupName);});
                             if (ticket.userid != resp.Items[i].owner && _.intersection(user_groups, resp.Items[i].groups).length == 0) {

@@ -1,36 +1,30 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: "(SO0017) - The AWS CloudFormation template for deployment of the AWS Data Lake resources. Version %%VERSION%%"
+Description: "(SO0017) - The AWS CloudFormation template for deployment of the AWS Data Lake AD Federated resources. Version %%VERSION%%"
 
 Parameters:
-    AdministratorName:
-        Type: String
-        Description: Name of the Data Lake administrator.
-        AllowedPattern : ".+"
-    AdministratorEmail:
-        Type: String
-        Description: Email address for Data Lake administrator.
-        AllowedPattern: "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
     CognitoDomain:
         Type: String
         Description: Prefixed domain names can only contain lower-case letters, numbers, and hyphens.
         AllowedPattern : "[a-z0-9-]+"
+
+    AdFsHostname:
+        Type: String
+        Description: Insert the hostname of your AD FS endpoint.
+        AllowedPattern: "^[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
 
 Metadata:
     AWS::CloudFormation::Interface:
         ParameterGroups:
             -
                 Label:
-                    default: "Administator Configuration"
+                    default: "Access Federation"
                 Parameters:
-                    - AdministratorName
-                    - AdministratorEmail
+                    - AdFsHostname
                     - CognitoDomain
         ParameterLabels:
-            AdministratorName:
-                default: "Administrator name"
-            AdministratorEmail:
-                default: "Administrator email address"
+            AdFsHostname:
+                default: "AD FS hostname"
             CognitoDomain:
                 default: "Amazon Cognito Domain"
 
@@ -70,7 +64,7 @@ Resources:
                 UserPoolClientId: !GetAtt DataLakeUserPool.UserPoolClientId
                 SourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
                 SourceKeyPrefix: !FindInMap ["SourceCode", "General", "KeyPrefix"]
-                FederatedLogin: false
+                FederatedLogin: true
 
     DataLakeApiStack:
         DependsOn: "DataLakeServicesStack"
@@ -452,15 +446,15 @@ Resources:
             apigEndpoint: !Join ["", ["https://", !GetAtt DataLakeApiStack.Outputs.ApiId, ".execute-api.", Ref: "AWS::Region", ".amazonaws.com/prod" ]]
             appVersion: "%%VERSION%%"
             destS3Bucket: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
-            federatedLogin: false
-            loginUrl: !Join ["", ["https://", !GetAtt ConsoleCFDistribution.DomainName]]
-            logoutUrl: !Join ["", ["https://", !GetAtt ConsoleCFDistribution.DomainName]]
+            federatedLogin: true
+            loginUrl: !Join ["", ["https://", !Ref CognitoDomain, ".auth.", Ref: "AWS::Region", ".amazoncognito.com/login?response_type=token&client_id=", !GetAtt DataLakeUserPool.UserPoolClientId, "&redirect_uri=https://", !GetAtt ConsoleCFDistribution.DomainName]]
+            logoutUrl: !Join ["", ["https://", !Ref CognitoDomain, ".auth.", Ref: "AWS::Region", ".amazoncognito.com/logout?client_id=", !GetAtt DataLakeUserPool.UserPoolClientId, "&logout_uri=https://", !GetAtt ConsoleCFDistribution.DomainName]]
             customAction: "createAppVariables"
 
-    DataLakeAdminUser:
+    FederateLogin:
         DependsOn:
-            - "ConsoleCFDistribution"
-            - "AppVariables"
+            - "DataLakeUserPool"
+            - "DataLakeKibanaCognito"
         Type: "Custom::LoadLambda"
         Properties:
             ServiceToken:
@@ -469,21 +463,34 @@ Resources:
                     - "Arn"
             Region:
                 - Ref: "AWS::Region"
+            adFsHostname: !Ref AdFsHostname
             userPoolId: !GetAtt DataLakeUserPool.UserPoolId
-            adminName: !Ref AdministratorName
-            adminEmail: !Ref AdministratorEmail
-            appUrl: !Join ["", ["https://", !GetAtt ConsoleCFDistribution.DomainName]]
-            customAction: "createAdminUser"
+            userPoolClientId: !GetAtt DataLakeUserPool.UserPoolClientId
+            consoleUrl: !Join ["", ["https://", !GetAtt ConsoleCFDistribution.DomainName]]
+            customAction: "federateAccess"
+
 Outputs:
     ConsoleUrl:
-        Description: "URL for the data lake console"
-        Value: !Join ["", ["https://", !GetAtt ConsoleCFDistribution.DomainName]]
+        Description: "URL for the data lake console."
+        Value: !Join ["", ["https://", !Ref CognitoDomain, ".auth.", Ref: "AWS::Region", ".amazoncognito.com/login?response_type=token&client_id=", !GetAtt DataLakeUserPool.UserPoolClientId, "&redirect_uri=https://", !GetAtt ConsoleCFDistribution.DomainName]]
     UserPoolId:
-        Description: "Id of data lake Amazon Cognito User Pool"
+        Description: "Id of data lake Amazon Cognito User Pool."
         Value: !GetAtt DataLakeUserPool.UserPoolId
     UserPoolClientId:
-        Description: "Id of data lake UI client app"
+        Description: "Id of data lake UI client app."
         Value: !GetAtt DataLakeUserPool.UserPoolClientId
     UUID:
-        Description: "UUID for data lake deployment"
+        Description: "UUID for data lake deployment."
         Value: !GetAtt DataLakeUuid.UUID
+    RelyingPartyURL:
+        Description: "Relying party SAML 2.0 SSO service URL"
+        Value: !Join ["", ["https://", !Ref CognitoDomain, ".auth.", Ref: "AWS::Region", ".amazoncognito.com/saml2/idpresponse"]]
+    RelyingPartyTrustedIdentifier:
+        Description: "Relying party trust identifier."
+        Value: !Join ["", ["urn:amazon:cognito:sp:", !GetAtt DataLakeUserPool.UserPoolId]]
+    LogoutTrustedURL:
+        Description: "Configure this endpoint for consuming logout responses from your IdP."
+        Value: !Join ["", ["https://", !Ref CognitoDomain, ".auth.", Ref: "AWS::Region", ".amazoncognito.com/saml2/logout"]]
+    IdentityProvidersUrl:
+        Description: "Link to Cognito page that contains the AD signing certificate."
+        Value: !GetAtt FederateLogin.IdentityProvidersUrl

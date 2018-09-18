@@ -71,8 +71,8 @@ angular.module('dataLake.factory.cart', ['ngResource', 'dataLake.utils', 'dataLa
 
     factory.getCartCount = function(cb) {
 
-        authService.getUserAccessTokenWithUsername().then(function(data) {
-            var _token = ['tk:', data.token.jwtToken].join('');
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
             cartResource(_token).query({}, function(data) {
                 var _cart = $_.filter(data.Items, function(o) {
                     return o.cart_item_status === 'pending' ||
@@ -93,8 +93,8 @@ angular.module('dataLake.factory.cart', ['ngResource', 'dataLake.utils', 'dataLa
 
     factory.checkoutCart = function(manifestType, cb) {
 
-        authService.getUserAccessTokenWithUsername().then(function(data) {
-            var _token = ['tk:', data.token.jwtToken].join('');
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
             cartResource(_token).checkout({}, {
                 operation: 'checkout',
                 format: manifestType
@@ -116,8 +116,8 @@ angular.module('dataLake.factory.cart', ['ngResource', 'dataLake.utils', 'dataLa
 
     factory.listCart = function(cb) {
 
-        authService.getUserAccessTokenWithUsername().then(function(data) {
-            var _token = ['tk:', data.token.jwtToken].join('');
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
             cartResource(_token).query({}, function(data) {
                 return cb(null, data.Items);
             }, function(err) {
@@ -132,8 +132,8 @@ angular.module('dataLake.factory.cart', ['ngResource', 'dataLake.utils', 'dataLa
 
     factory.getCartItem = function(itemid, cb) {
 
-        authService.getUserAccessTokenWithUsername().then(function(data) {
-            var _token = ['tk:', data.token.jwtToken].join('');
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
             cartItemResource(_token).get({
                 itemId: itemid
             }, function(data) {
@@ -154,8 +154,8 @@ angular.module('dataLake.factory.cart', ['ngResource', 'dataLake.utils', 'dataLa
 
     factory.createCartItem = function(newitem, cb) {
 
-        authService.getUserAccessTokenWithUsername().then(function(data) {
-            var _token = ['tk:', data.token.jwtToken].join('');
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
             cartItemResource(_token).create({
                 itemId: 'new'
             }, newitem, function(data) {
@@ -176,8 +176,8 @@ angular.module('dataLake.factory.cart', ['ngResource', 'dataLake.utils', 'dataLa
 
     factory.deleteCartItem = function(itemid, cb) {
 
-        authService.getUserAccessTokenWithUsername().then(function(data) {
-            var _token = ['tk:', data.token.jwtToken].join('');
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
             cartItemResource(_token).remove({
                 itemId: itemid
             }, function(data) {
@@ -193,9 +193,9 @@ angular.module('dataLake.factory.cart', ['ngResource', 'dataLake.utils', 'dataLa
     };
 
     factory.deletePackage = function(packageId, cb) {
-        authService.getUserAccessTokenWithUsername().then(function(data) {
-            var _token = ['tk:', data.token.jwtToken].join('');
 
+        authService.getUserAccessToken().then(function(token) {
+            var _token = ['tk:', token.jwtToken].join('');
             cartResource(_token).query({}, function(data) {
                 for (var i = 0; i < data.Items.length; i++) {
                     if (data.Items[i].package_id === packageId) {

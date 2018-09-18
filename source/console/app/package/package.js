@@ -18,7 +18,8 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
                 controller: 'PackageCtrl'
             }
         },
-        authenticate: true
+        authenticate: true,
+        activeWithFederation: true
     });
 }])
 
@@ -92,7 +93,7 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
                 $scope.pckgName = datapackage.name;
 
                 authService.getUserInfo().then(function(userinfo) {
-                    if (userinfo.username === datapackage.owner || userinfo.role === 'Admin') {
+                    if (userinfo.username === datapackage.owner || userinfo.role.toLowerCase() === 'admin') {
                         $scope.canEdit = true;
                     }
 
@@ -345,7 +346,7 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
                     var _dataset = {
                         name: file.name,
                         type: 'manifest',
-                        content_type: file.type,
+                        content_type: file.type === '' ? 'json' : file.type,
                         owner: $rootScope.username
                     };
 
@@ -489,6 +490,7 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
     $scope.removeMetadata = function(index) {
         if (index > -1 && index < $scope.newMetadata.length) {
             $scope.newMetadata.splice(index, 1);
+            $scope.validateTag();
         }
     };
 
@@ -560,12 +562,15 @@ angular.module('dataLake.package', ['dataLake.main', 'dataLake.utils', 'dataLake
         $scope.$apply();
     };
 
-    $scope.validateTag = function(metadata) {
-        if (metadata.tag.length === 0 || metadata.tag.indexOf(' ') !== -1) {
-            metadata.invalid = true;
-            $scope.invalidMetadata = true;
-        } else {
-            metadata.invalid = false;
+    $scope.validateTag = function() {
+        $scope.invalidMetadata = false;
+        if ($scope.newMetadata.length > 0) {
+            for (var i = 0; i < $scope.newMetadata.length; i++) {
+                if ($scope.newMetadata[i].tag.length === 0 || $scope.newMetadata[i].tag.indexOf(' ') !== -1) {
+                    $scope.invalidMetadata = true;
+                    return;
+                }
+            }
         }
     };
 

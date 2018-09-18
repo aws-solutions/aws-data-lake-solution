@@ -398,9 +398,8 @@ let manifest = (function() {
             let _manifest = validateJSON(data);
             if (_manifest) {
                 processManifestEntry(event.dataset, _manifest.dataStore, 0, 0, function(err, data) {
-                    console.log(data);
 
-                    let stateDesc = (data.errorCounter == 0) ? 'Processed' : `Failed to process ${data.errorCounter} file(s)`;
+                    let stateDesc = (data.errorCounter == 0) ? 'Processed' : `Failed to process ${data.errorCounter} entry(ies)`;
                     updateManifestDatasetStatus(stateDesc, function(err, manifest) {
                         if (err) {
                             console.log(err);
@@ -483,31 +482,37 @@ let manifest = (function() {
      */
     let processManifestEntry = function(manifest, entries, index, errorCounter, cb) {
         if (index < entries.length) {
-            let includePathData = url.parse(entries[index].includePath);
             try {
-                let _dataset = {
-                  package_id: manifest.package_id,
-                  content_type: "include-path",
-                  created_by: _manifesDataset.created_by,
-                  s3_bucket: includePathData.hostname,
-                  s3_key: includePathData.path,
-                  excludePatterns: entries[index].excludePatterns ? entries[index].excludePatterns : [],
-                  name: includePathData.hostname + includePathData.path,
-                  owner: `imported from ${manifest.name}`,
-                  parent_dataset_id: manifest.dataset_id
-                };
+                let includePathData = url.parse(entries[index].includePath);
+                if (includePathData.hostname) {
+                    includePathData.path = includePathData.path ? includePathData.path : '/';
+                    let _dataset = {
+                      package_id: manifest.package_id,
+                      content_type: "include-path",
+                      created_by: _manifesDataset.created_by,
+                      s3_bucket: includePathData.hostname,
+                      s3_key: includePathData.path,
+                      excludePatterns: entries[index].excludePatterns ? entries[index].excludePatterns : [],
+                      name: includePathData.hostname + includePathData.path,
+                      owner: `imported from ${manifest.name}`,
+                      parent_dataset_id: manifest.dataset_id
+                    };
+                    addDatasetToPackage(_dataset, function(err, data) {
+                        if (err) {
+                            console.log('Error adding the dataset to the package in ddb', err);
+                            errorCounter = errorCounter + 1;
+                        }
 
-                addDatasetToPackage(_dataset, function(err, data) {
-                    if (err) {
-                        console.log('Error adding the dataset to the package in ddb', err);
-                        errorCounter = errorCounter + 1;
-                    }
+                        processManifestEntry(manifest, entries, index + 1, errorCounter, cb);
+                    });
 
-                    processManifestEntry(manifest, entries, index + 1, errorCounter, cb);
-                });
+                } else {
+                    console.log('Manifest entry to able to be parsed ', entries[index].includePath);
+                    processManifestEntry(manifest, entries, index + 1, errorCounter + 1, cb);
+                }
 
             } catch (ex) {
-                console.log('Manifest entry to able to be parsed ', entries[index].url);
+                console.log('Manifest entry to able to be parsed ', entries[index].includePath);
                 processManifestEntry(manifest, entries, index + 1, errorCounter + 1, cb);
             }
         } else {
@@ -559,10 +564,12 @@ let manifest = (function() {
      */
     let validateJSON = function(body) {
         try {
-            console.log(body);
             let data = JSON.parse(body);
-            console.log(data);
-            return data;
+            if (data.dataStore === undefined || data.dataStore.length == 0) {
+                return null;
+            } else {
+                return data;
+            }
         } catch (e) {
             // failed to parse
             console.log('Manifest file contains invalid JSON.');

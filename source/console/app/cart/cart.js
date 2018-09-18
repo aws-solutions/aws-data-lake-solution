@@ -33,7 +33,8 @@ angular.module('dataLake.cart', ['dataLake.main', 'dataLake.utils', 'dataLake.fa
                 controller: 'CartCtrl'
             }
         },
-        authenticate: true
+        authenticate: true,
+        activeWithFederation: true
     });
 }])
 

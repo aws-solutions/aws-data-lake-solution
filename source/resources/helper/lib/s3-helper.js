@@ -78,44 +78,57 @@ let s3Helper = (function() {
                         return cb(err, null);
                     }
 
-                    var paramsBucketPolicy = {
+                    var paramsBucketWebsite = {
                         Bucket: websiteBucket,
-                        Policy: JSON.stringify({
-                            Version: "2008-10-17",
-                            Statement: [
-                                {
-                                    Effect: "Allow",
-                                    Principal: "*",
-                                    Action: "s3:GetObject",
-                                    Resource: `arn:aws:s3:::${websiteBucket}/*`
-                                }
-                            ]
-                        })
+                        WebsiteConfiguration: {
+                            ErrorDocument: {Key: "index.html"},
+                            IndexDocument: {Suffix: "index.html"}
+                        }
                     };
-                    s3.putBucketPolicy(paramsBucketPolicy, function(err, data) {
+                    s3.putBucketWebsite(paramsBucketWebsite, function(err, data) {
                         if (err) {
                             console.log(err, err.stack);
-                            return cb({code: 502, message: `Failed to configure ${websiteBucket} bucket policy.`}, null);
+                            return cb({code: 502, message: `Failed to configure ${websiteBucket} bucket for static website.`}, null);
                         }
 
-                        var paramsBucketWebsite = {
-                            Bucket: websiteBucket,
-                            WebsiteConfiguration: {
-                                ErrorDocument: {Key: "index.html"},
-                                IndexDocument: {Suffix: "index.html"}
-                            }
-                        };
-                        s3.putBucketWebsite(paramsBucketWebsite, function(err, data) {
-                            if (err) {
-                                console.log(err, err.stack);
-                                return cb({code: 502, message: `Failed to configure ${websiteBucket} bucket for static website.`}, null);
-                            }
-
-                            return cb(null, {code: 200, message: `Data Lake buckets created.`});
-                        });
+                        return cb(null, {code: 200, message: `Data Lake buckets created.`});
                     });
                 });
             });
+        });
+    };
+
+    /**
+     * Configure Data Lake website buckets policy
+     *
+     * @param {string} websiteBucket - Data Lake website bucket name.
+     * @param {string} consoleCanonicalUserId - Canonical user ID for the Console CloudFront distribution origin access identity.
+     * @param {configureDataLakeBuckets~requestCallback} cb - The callback that handles the response.
+     */
+    s3Helper.prototype.configureDatalakeBucketPolicy  = function(websiteBucket, consoleCanonicalUserId, cb) {
+        let s3 = new AWS.S3();
+
+        var paramsBucketPolicy = {
+            Bucket: websiteBucket,
+            Policy: JSON.stringify({
+                Version: "2008-10-17",
+                Statement: [
+                    {
+                        Effect: "Allow",
+                        Principal: {CanonicalUser: consoleCanonicalUserId},
+                        Action: "s3:GetObject",
+                        Resource: `arn:aws:s3:::${websiteBucket}/*`
+                    }
+                ]
+            })
+        };
+        s3.putBucketPolicy(paramsBucketPolicy, function(err, data) {
+            if (err) {
+                console.log(err, err.stack);
+                return cb({code: 502, message: `Failed to configure ${websiteBucket} bucket policy.`}, null);
+            }
+
+            return cb(null, {code: 200, message: `Buckets policy updated.`});
         });
     };
 
@@ -165,7 +178,7 @@ let s3Helper = (function() {
             Bucket: bucketName
         };
         if (process.env.AWS_REGION !== "us-east-1") {
-            paramsCreate.CreateBucketConfiguration = {LocationConstraint: process.env.AWS_REGION}
+            paramsCreate.CreateBucketConfiguration = {LocationConstraint: process.env.AWS_REGION};
         }
         s3.createBucket(paramsCreate, function(err, data) {
             if (err && err.code != 'BucketAlreadyOwnedByYou' && err.code != 'BucketAlreadyExists') {
@@ -224,7 +237,7 @@ let s3Helper = (function() {
      * @param {copyDataLakeSiteAssets~requestCallback} cb - The callback that handles the response.
      */
     s3Helper.prototype.copyDataLakeSiteAssets = function(sourceS3Bucket, sourceS3prefix, sourceSiteManifestS3prefix,
-        destS3Bucket, userPoolId, userPoolClientId, apigEndpoint, appVersion, cb) {
+        destS3Bucket, cb) {
         console.log(['source bucket:', sourceS3Bucket].join(' '));
         console.log(['source prefix:', sourceS3prefix].join(' '));
         console.log(['source site manifest prefix:', sourceSiteManifestS3prefix].join(' '));
@@ -242,7 +255,6 @@ let s3Helper = (function() {
                     return cb(err, null);
                 }
 
-                console.log(data);
                 let _manifest = validateJSON(data);
 
                 if (!_manifest) {
@@ -256,16 +268,7 @@ let s3Helper = (function() {
                             }
 
                             console.log(result);
-
-                            createAppVariables(userPoolId, userPoolClientId, apigEndpoint,
-                                appVersion, destS3Bucket,
-                                function(err, createResult) {
-                                    if (err) {
-                                        return cb(err, null);
-                                    }
-
-                                    return cb(null, result);
-                                });
+                            return cb(null, result);
                         });
                 }
 
@@ -283,7 +286,6 @@ let s3Helper = (function() {
     let validateJSON = function(body) {
         try {
             let data = JSON.parse(body);
-            console.log(data);
             return data;
         } catch (e) {
             // failed to parse
@@ -292,13 +294,15 @@ let s3Helper = (function() {
         }
     };
 
-    let createAppVariables = function(userPoolId, userPoolClientId, apigEndpoint, appVersion, destS3Bucket, cb) {
+    s3Helper.prototype.createAppVariables = function(userPoolId, userPoolClientId, apigEndpoint, appVersion, destS3Bucket, federatedLogin, loginUrl, logoutUrl, cb) {
         var _content = [
-            ['var YOUR_USER_POOL_ID = \'', userPoolId, '\';'].join(''), ['var YOUR_USER_POOL_CLIENT_ID = \'',
-                userPoolClientId, '\';'
-            ].join(''), ['var APIG_ENDPOINT = \'', apigEndpoint, '\';'].join(''), ['var APP_VERSION = \'',
-                appVersion, '\';'
-            ].join('')
+            ['var YOUR_USER_POOL_ID = \'', userPoolId, '\';'].join(''),
+            ['var YOUR_USER_POOL_CLIENT_ID = \'', userPoolClientId, '\';'].join(''),
+            ['var APIG_ENDPOINT = \'', apigEndpoint, '\';'].join(''),
+            ['var APP_VERSION = \'', appVersion, '\';'].join(''),
+            ['var FEDERATED_LOGIN = ', federatedLogin, ';'].join(''),
+            ['var LOGIN_URL = \'', loginUrl, '\';'].join(''),
+            ['var LOGOUT_URL = \'', logoutUrl, '\';'].join('')
         ].join('\n');
 
         let params = {
@@ -313,7 +317,6 @@ let s3Helper = (function() {
                 return cb('error creating app-variables.js file for data lake website', null);
             }
 
-            console.log(data);
             return cb(null, data);
         });
 
@@ -321,7 +324,7 @@ let s3Helper = (function() {
 
     let uploadFile = function(filelist, index, destS3Bucket, sourceS3prefix, cb) {
         if (filelist.length > index) {
-            let contentType = mime.lookup(filelist[index])
+            let contentType = mime.lookup(filelist[index]);
             let params = {
                 Bucket: destS3Bucket,
                 Key: filelist[index],

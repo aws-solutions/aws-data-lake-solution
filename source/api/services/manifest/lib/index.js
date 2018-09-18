@@ -24,7 +24,7 @@ let manifest = require('./manifest.js');
 module.exports.respond = function(event, cb) {
 
     let _authCheckPayload = {
-        authcheck: ['Admin', 'Member'],
+        authcheck: ['admin', 'member'],
         authorizationToken: event.authorizationToken
     };
 

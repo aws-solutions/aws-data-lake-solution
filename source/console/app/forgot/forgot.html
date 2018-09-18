@@ -22,6 +22,9 @@
                             <p ng-message="email">This needs to be a valid email</p>
                         </div>
                     </div>
+                    <div class="form-group" ng-show="message">
+                        <p class="text-muted text-center">{{message}}</p>
+                    </div>
                 </div>
                 <div class="panel-footer">
                     <div class="text-center">

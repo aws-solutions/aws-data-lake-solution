@@ -17,7 +17,6 @@
 
 'use strict';
 
-let moment = require('moment');
 let https = require('https');
 
 /**
@@ -55,7 +54,6 @@ let metricsHelper = (function() {
             // so we have to handle the "data" event
             let buffer;
             let data;
-            let route;
 
             response.on('data', function(chunk) {
                 buffer += chunk;
@@ -75,7 +73,7 @@ let metricsHelper = (function() {
 
         request.on('error', (e) => {
             console.error(e);
-            cb(['Error occurred when sending metric request.', JSON.stringify(_payload)].join(' '), null);
+            cb(['Error occurred when sending metric request.', JSON.stringify(metric)].join(' '), null);
         });
     };
 

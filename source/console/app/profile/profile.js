@@ -35,7 +35,8 @@ angular.module('dataLake.profile', ['dataLake.main', 'dataLake.utils', 'dataLake
                 controller: 'ProfileCtrl'
             }
         },
-        authenticate: true
+        authenticate: true,
+        activeWithFederation: true
     });
 }])
 
@@ -52,6 +53,7 @@ angular.module('dataLake.profile', ['dataLake.main', 'dataLake.utils', 'dataLake
     $scope.awsUiAlert.type = "";
     $scope.awsUiAlert.header = "";
     $scope.awsUiAlert.content = "";
+    $scope.showChangePassword = false;
 
     var getUserDetails = function() {
         $blockUI.start();
@@ -66,6 +68,7 @@ angular.module('dataLake.profile', ['dataLake.main', 'dataLake.utils', 'dataLake
 
                 $scope.profile = profile;
                 $scope.user = result;
+                $scope.showChangePassword = !FEDERATED_LOGIN;
                 $blockUI.stop();
             });
         }, function(msg) {

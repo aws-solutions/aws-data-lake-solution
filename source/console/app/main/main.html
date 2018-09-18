@@ -41,8 +41,8 @@
                   <div id="adminMenu" class="c-s-3 c-m-12" ng-show="showadmin">
                       <h4>Administration</h4>
                       <ul class="awsui-list awsui-list-unstyled" style="margin-top: 0;">
-                          <li><a ng-class="getMenuClass('/admin/groups')" href="#admin/groups">Groups</a></li>
-                          <li><a ng-class="getMenuClass('/admin/users')" href="#admin/users">Users</a></li>
+                          <li><a ng-class="getMenuClass('/admin/groups')" href="#admin/groups" ng-show="showGroups">Groups</a></li>
+                          <li><a ng-class="getMenuClass('/admin/users')" href="#admin/users" ng-show="showUsers">Users</a></li>
                           <li><a ng-class="getMenuClass('/admin/settings')" href="#admin/settings">Settings</a></li>
                       </ul>
                   </div>
@@ -59,7 +59,7 @@
     </main>
 
     <footer>
-      <p class="pull-left">Created by the Solutions Builder team. <a contact-us>Let us know</a> what you think!</p>
+      <p class="pull-left">Created by the Solutions Builder team. <a contact-us href="https://forums.aws.amazon.com/forum.jspa?forumID=226" target="_blank">Let us know</a> what you think!</p>
         <div class="text-muted" style="float:right">Version <span app-version></span></div>
     </footer>
 

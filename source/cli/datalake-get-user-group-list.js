@@ -15,6 +15,7 @@ if (!program.userId) {
     console.error('option "--user-id <value>" argument required');
     process.exit(1);
 }
+program.userId = encodeURIComponent(program.userId);
 
 //-----------------------------------------------------------------------------
 // get the signed api credentials

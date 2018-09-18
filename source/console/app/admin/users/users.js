@@ -33,14 +33,20 @@ angular.module('dataLake.admin.users', ['dataLake.main', 'dataLake.utils', 'data
                 controller: 'AdminUsersCtrl'
             }
         },
-        adminAuthenticate: true
+        adminAuthenticate: true,
+        activeWithFederation: true
     });
 }])
+
+.filter('encodeURIComponent', function($window) {
+    return $window.encodeURIComponent;
+})
 
 .controller('AdminUsersCtrl', function($scope, $state, $blockUI, adminUserFactory) {
 
     $scope.results = [];
     $scope.showerror = false;
+    $scope.federatedLogin = FEDERATED_LOGIN;
 
     var getUsers = function() {
         $blockUI.start();

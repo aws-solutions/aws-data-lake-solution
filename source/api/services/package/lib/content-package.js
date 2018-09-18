@@ -391,7 +391,7 @@ let contentPackage = (function() {
                     return cb({code: 404, message: 'The data lake package requested to update does not exist.'}, null);
                 }
 
-                if (data.Item.owner != ticket.userid && ticket.role != 'Admin') {
+                if (data.Item.owner != ticket.userid && ticket.role.toLowerCase() != 'admin') {
                     return cb({code: 401, message: 'User does not have access to updated the requested package.'}, null);
                 }
 
@@ -503,8 +503,8 @@ let contentPackage = (function() {
             let glue = new AWS.Glue();
             glue.getTables(params, function(err, data) {
                 if (err) {
-                    console.log(err);
-                    return cb({code: 502, message: "Failed to retrieve definitions of tables in this package. Check if the package tables already exist in AWS Glue."}, null);
+                    // Fix for github issue #20
+                    return cb(null, {tables:[], message: "Failed to retrieve definitions of tables in this package. Check if the package tables already exist in AWS Glue."});
                 }
                 else {
                     var glueTables = [];
@@ -632,20 +632,26 @@ let contentPackage = (function() {
             var params = {Name: glueNames.crawler};
             let glue = new AWS.Glue();
             glue.getCrawler(params, function(err, data) {
-                if (err) {
-                    console.log(err);
-                    return cb({code: 502, message: `Failed to retrieve crawler metadata for package ${packageId}. Check if the crawler already exist in AWS Glue.`}, null);
-                }
-
                 let glueCrawler = {
-                    name: data.Crawler.Name,
-                    status: data.Crawler.State,
-                    lastRun: "NOT FINISHED",
+                    name: "-",
+                    status: "-",
+                    lastRun: "-"
                 };
-                if (data.Crawler.LastCrawl !== undefined && data.Crawler.LastCrawl.Status !== undefined) {
-                    glueCrawler.lastRun = data.Crawler.LastCrawl.Status;
+
+                if (err) {
+                    glueCrawler.status = `Failed to retrieve crawler metadata for package ${packageId}. Check if the crawler already exist in AWS Glue.`;
+
+                } else {
+                    glueCrawler.name = data.Crawler.Name;
+                    glueCrawler.status = data.Crawler.State;
+                    if (data.Crawler.LastCrawl !== undefined && data.Crawler.LastCrawl.Status !== undefined) {
+                        glueCrawler.lastRun = data.Crawler.LastCrawl.Status;
+                    } else {
+                        glueCrawler.lastRun = "NOT FINISHED";
+                    }
                 }
 
+                // Fix for github issue #20
                 return cb(null, glueCrawler);
             });
         });
@@ -718,47 +724,48 @@ let contentPackage = (function() {
                     let glueNames = getGlueNames(packageName, packageId);
                     let params = {Name: glueNames.crawler};
                     glue.getCrawler(params, function(err, data) {
-                        if (err) {
-                            let crawlerData = {
-                                DatabaseName: glueNames.database,
-                                Name: glueNames.crawler,
-                                Role: process.env.CRAWLER_ROLE_ARN,
-                                Targets: {S3Targets: [{Path: defaultTarget}]},
-                                Description: 'Glue crawler that creates tables based on S3 DataLake resources',
-                                Schedule: 'cron(0 0 * * ? *)',
-                                Configuration: '{ "Version": 1.0, "CrawlerOutput": { "Partitions": { "AddOrUpdateBehavior": "InheritFromTable" } } }',
-                                SchemaChangePolicy: {
-                                  DeleteBehavior: 'DELETE_FROM_DATABASE',
-                                  UpdateBehavior: 'UPDATE_IN_DATABASE'
-                                },
-                                TablePrefix: glueNames.tablePrefix
-                            };
-                            crawlerData.Targets.S3Targets[0].Exclusions = crawlerFilter.exclude;
-                            crawlerData.Targets.S3Targets = crawlerData.Targets.S3Targets.concat(crawlerFilter.include);
-                            glue.createCrawler(crawlerData, function(err, data) {
-                                if (err) {
-                                    console.log(err);
-                                    return cb({code: 502, message: "Failed to create AWS Glue crawler. Check account limits and if the name of the package is supported by AWS Glue."}, null);
-                                }
+                        let crawlerData = {
+                            DatabaseName: glueNames.database,
+                            Name: glueNames.crawler,
+                            Role: process.env.CRAWLER_ROLE_ARN,
+                            Targets: {S3Targets: [{Path: defaultTarget}]},
+                            Description: 'Glue crawler that creates tables based on S3 DataLake resources',
+                            Schedule: 'cron(0 0 * * ? *)',
+                            Configuration: '{ "Version": 1.0, "CrawlerOutput": { "Partitions": { "AddOrUpdateBehavior": "InheritFromTable" } } }',
+                            SchemaChangePolicy: {
+                              DeleteBehavior: 'DELETE_FROM_DATABASE',
+                              UpdateBehavior: 'UPDATE_IN_DATABASE'
+                            },
+                            TablePrefix: glueNames.tablePrefix
+                        };
+                        crawlerData.Targets.S3Targets[0].Exclusions = crawlerFilter.exclude;
+                        crawlerData.Targets.S3Targets = crawlerData.Targets.S3Targets.concat(crawlerFilter.include);
 
-                                return cb(null, {code: 200, message: `AWS Glue crawler ${glueNames.database} created.`});
-                            });
-
-
-                        } else {
-                            let crawlerData = {
-                                DatabaseName: data.Crawler.DatabaseName,
-                                Name: data.Crawler.Name,
-                                Role: data.Crawler.Role,
-                                Targets: {S3Targets: [{Path: defaultTarget}]},
-                                Description: data.Crawler.Description,
-                                Schedule: data.Crawler.Schedule.ScheduleExpression,
-                                Configuration: data.Crawler.Configuration,
-                                SchemaChangePolicy: data.Crawler.SchemaChangePolicy,
-                                TablePrefix: data.Crawler.TablePrefix
-                            };
-                            crawlerData.Targets.S3Targets[0].Exclusions = crawlerFilter.exclude;
-                            crawlerData.Targets.S3Targets = crawlerData.Targets.S3Targets.concat(crawlerFilter.include);
+                        if (data && data.Crawler !== undefined) {
+                            if (data.Crawler.DatabaseName !== undefined) {
+                                crawlerData.DatabaseName = data.Crawler.DatabaseName;
+                            }
+                            if (data.Crawler.Name !== undefined) {
+                                crawlerData.Name = data.Crawler.Name;
+                            }
+                            if (data.Crawler.Role !== undefined) {
+                                crawlerData.Role = data.Crawler.Role;
+                            }
+                            if (data.Crawler.Description !== undefined) {
+                                crawlerData.Description = data.Crawler.Description;
+                            }
+                            if (data.Crawler.Schedule !== undefined && data.Crawler.Schedule.ScheduleExpression !== undefined) {
+                                crawlerData.Schedule = data.Crawler.Schedule.ScheduleExpression;
+                            }
+                            if (data.Crawler.Configuration !== undefined) {
+                                crawlerData.Configuration = data.Crawler.Configuration;
+                            }
+                            if (data.Crawler.SchemaChangePolicy !== undefined) {
+                                crawlerData.SchemaChangePolicy = data.Crawler.SchemaChangePolicy;
+                            }
+                            if (data.Crawler.TablePrefix !== undefined) {
+                                crawlerData.TablePrefix = data.Crawler.TablePrefix;
+                            }
                             glue.updateCrawler(crawlerData, function(err, data) {
                                 if (err) {
                                     console.log(err);
@@ -766,6 +773,16 @@ let contentPackage = (function() {
                                 }
 
                                 return cb(null, {code: 200, message: `AWS Glue crawler ${glueNames.database} updated.`});
+                            });
+
+                        } else {
+                            glue.createCrawler(crawlerData, function(err, data) {
+                                if (err) {
+                                    console.log(err);
+                                    return cb({code: 502, message: "Failed to create AWS Glue crawler. Check account limits and if the name of the package is supported by AWS Glue."}, null);
+                                }
+
+                                return cb(null, {code: 200, message: `AWS Glue crawler ${glueNames.database} created.`});
                             });
                         }
                     });
@@ -844,10 +861,11 @@ let contentPackage = (function() {
         packageName = packageName.replace(/_/g," ").trim().replace(/ /g,"_"); //trim('_')
 
         // Subtract sufix.length to avoid truncating packageId value
-        let sufix = '_' + packageId;
+        let database_sufix = '_' + packageId;
+        let crawler_sufix = ' ' + packageId;
         return {
-            database: packageName.substring(0, 252 - sufix.length) + sufix,
-            crawler: packageName.substring(0, 252 - sufix.length) + sufix, // using same limit above
+            database: packageName.substring(0, 252 - database_sufix.length) + database_sufix,
+            crawler: packageName.substring(0, 252 - crawler_sufix.length) + crawler_sufix, // using same limit above
             tablePrefix: `${packageName}`.substring(0, 63) + '_'
         };
     };

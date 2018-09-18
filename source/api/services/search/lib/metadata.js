@@ -17,7 +17,6 @@
 
 'use strict';
 
-let moment = require('moment');
 let AWS = require('aws-sdk');
 let _ = require('underscore');
 let AccessValidator = require('access-validator');
@@ -76,7 +75,7 @@ let metadata = (function() {
                     // Get user group list and set filter based on those groups
                     //-------------------------------------------------------------
                     let filter = [];
-                    if (ticket.role != 'Admin') {
+                    if (ticket.role.toLowerCase() != 'admin') {
                         filter.push({match: {"owner": ticket.userid}});
                         data.Groups.map(group => {filter.push({match: {"groups": group.GroupName}});});
                     }
@@ -198,7 +197,7 @@ let metadata = (function() {
                         },
                         size: 0
                     };
-                    if (ticket.role != 'Admin') {
+                    if (ticket.role.toLowerCase() != 'admin') {
                         let filter = [];
                         filter.push({match: {"owner": ticket.userid}});
                         data.Groups.map(group => {filter.push({match: {"groups": group.GroupName}});});
@@ -279,9 +278,7 @@ let metadata = (function() {
                         id: contentPackage.package_id,
                         body: contentPackage
                     }).then(function(body) {
-                        let hits = body.hits.hits;
-                        console.log(body);
-                        cb(null, hits);
+                        cb(null, {message: 'Document indexed successfully.'});
                     }, function(error) {
                         console.trace(error.message);
                         cb(error, null);
@@ -370,7 +367,8 @@ let metadata = (function() {
      */
     metadata.prototype.indexColumns = function (event, cb) {
         let crawlerName = event.detail.crawlerName;
-        let packageId = crawlerName.split('_').pop();
+        let databaseName = crawlerName.replace(/ /g,"_");
+        let packageId = crawlerName.split(' ').pop();
         let columnNames = [];
         let columnComments = [];
         let tableDescs = [];
@@ -403,7 +401,7 @@ let metadata = (function() {
             // Get column names, comments and table descriptions
             //---------------------------------------------------------------------
             params = {
-                DatabaseName: crawlerName
+                DatabaseName: databaseName
             };
             glue.getTables(params, function(err, data) {
                 if (err) {

@@ -53,30 +53,29 @@ let user = (function() {
     user.prototype.getUsers = function(cb) {
 
         getUserPoolConfigInfo(function(err, poolinfo) {
-
             if (err) {
-                console.log(err);
                 return cb(err, null);
             }
 
             let params = {
                 UserPoolId: poolinfo,
-                /* required */
                 AttributesToGet: [
                     'email',
                     'custom:display_name',
                     'custom:role'
-                    /* more items */
                 ],
                 Filter: '',
                 Limit: 0
             };
+            if(process.env.FEDERATED_LOGIN == 'true') {
+                params.AttributesToGet = [ ];
+            }
 
             let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
             cognitoidentityserviceprovider.listUsers(params, function(err, data) {
                 if (err) {
                     console.log(err);
-                    return cb(err, null);
+                    return cb({code: 502, message: "Failed to list users."}, null);
                 }
 
                 let _users = [];
@@ -117,10 +116,7 @@ let user = (function() {
                     }
                 }
 
-                return cb(null, {
-                    Items: _users
-                });
-
+                return cb(null, {Items: _users});
             });
 
         });
@@ -128,16 +124,74 @@ let user = (function() {
     };
 
     /**
+     * Calling this API causes a message to be sent to the end user with a confirmation
+     * code that is required to change the user's password.
+     *
+     * @param {string} userId - Username of account to start change password process.
+     * @param {forgotPassword~requestCallback} cb - The callback that handles the response.
+     */
+    user.prototype.forgotPassword = function(userId, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
+
+        getUserPoolConfigInfo(function(err, poolinfo) {
+            if (err) {
+                console.log(err);
+                return cb({code: 502, message: "Failed to process forgot request."}, null);
+            }
+
+            let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
+            let _password = generatedSecurePassword();
+            let params = {
+                ClientId: process.env.USER_POOL_CLIENT_ID,
+                Username: userId
+            };
+            cognitoidentityserviceprovider.forgotPassword(params, function(err, data) {
+                if (err) {
+                    if (err.code === 'NotAuthorizedException') {
+                        let params = {
+                            UserPoolId: poolinfo,
+                            Username: userId,
+                            DesiredDeliveryMediums: ['EMAIL'],
+                            MessageAction: 'RESEND',
+                            TemporaryPassword: _password,
+                            UserAttributes: []
+                        };
+                        cognitoidentityserviceprovider.adminCreateUser(params, function(err, data) {
+                            if (err) {
+                                console.log(err);
+                                return cb({code: 502, message: "Failed to process forgot request."}, null);
+
+                            } else {
+                                return cb(null, {code: "INVITE_RESENT"});
+                            }
+                        });
+
+                    } else {
+                        console.log(err);
+                        return cb({code: 502, message: "Failed to process forgot request."}, null);
+                    }
+
+                } else {
+                    return cb(null, {code: "RESET_CODE_SENT"});
+                }
+            });
+        });
+    };
+
+    /**
      * Disables a user account in the data lake Amazon Cognito user pool.
-     * @param {integer} userId - Username of account to disable in user pool.
+     * @param {string} userId - Username of account to disable in user pool.
      * @param {disableUser~requestCallback} cb - The callback that handles the response.
      */
     user.prototype.disableUser = function(userId, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         getUserPoolConfigInfo(function(err, poolinfo) {
-
             if (err) {
-                console.log(err);
                 return cb(err, null);
             }
 
@@ -151,7 +205,7 @@ let user = (function() {
                 data) {
                 if (err) {
                     console.log(err);
-                    return cb(err, null);
+                    return cb({code: 502, message: "Failed to disable user."}, null);
                 }
 
                 return cb(null, data);
@@ -163,15 +217,16 @@ let user = (function() {
 
     /**
      * Enables a user account in the data lake Amazon Cognito user pool.
-     * @param {integer} userId - Username of account to enable in user pool.
+     * @param {string} userId - Username of account to enable in user pool.
      * @param {enableUser~requestCallback} cb - The callback that handles the response.
      */
     user.prototype.enableUser = function(userId, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         getUserPoolConfigInfo(function(err, poolinfo) {
-
             if (err) {
-                console.log(err);
                 return cb(err, null);
             }
 
@@ -185,7 +240,7 @@ let user = (function() {
                 data) {
                 if (err) {
                     console.log(err);
-                    return cb(err, null);
+                    return cb({code: 502, message: "Failed to enable user."}, null);
                 }
 
                 return cb(null, data);
@@ -197,15 +252,16 @@ let user = (function() {
 
     /**
      * Deletes a user account from the data lake Amazon Cognito user pool.
-     * @param {integer} userId - Username of account to delete from the user pool.
+     * @param {string} userId - Username of account to delete from the user pool.
      * @param {deleteUser~requestCallback} cb - The callback that handles the response.
      */
     user.prototype.deleteUser = function(userId, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         getUserPoolConfigInfo(function(err, poolinfo) {
-
             if (err) {
-                console.log(err);
                 return cb(err, null);
             }
 
@@ -219,7 +275,7 @@ let user = (function() {
                 data) {
                 if (err) {
                     console.log(err);
-                    return cb(err, null);
+                    return cb({code: 502, message: "Failed to delete user."}, null);
                 }
 
                 return cb(null, data);
@@ -231,15 +287,17 @@ let user = (function() {
 
     /**
      * Update the role for a user account in the data lake Amazon Cognito user pool.
-     * @param {integer} userId - Username of account to update in the user pool.
+     * @param {string} userId - Username of account to update in the user pool.
      * @param {JSON} user - User object with updated data.
      * @param {updateUser~requestCallback} cb - The callback that handles the response.
      */
     user.prototype.updateUser = function(userId, user, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         getUserPoolConfigInfo(function(err, poolinfo) {
             if (err) {
-                console.log(err);
                 return cb(err, null);
             }
 
@@ -257,7 +315,7 @@ let user = (function() {
                 data) {
                 if (err) {
                     console.log(err);
-                    return cb(err, null);
+                    return cb({code: 502, message: "Failed to update user."}, null);
                 }
 
                 return cb(null, data);
@@ -272,10 +330,12 @@ let user = (function() {
      * @param {inviteUser~requestCallback} cb - The callback that handles the response.
      */
     user.prototype.inviteUser = function(invite, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         getUserPoolConfigInfo(function(err, poolinfo) {
             if (err) {
-                console.log(err);
                 return cb(err, null);
             }
 
@@ -309,7 +369,7 @@ let user = (function() {
             cognitoidentityserviceprovider.adminCreateUser(params, function(err, data) {
                 if (err) {
                     console.log(err);
-                    return cb(err, null);
+                    return cb({code: 502, message: "Failed to invite user."}, null);
                 }
 
                 return cb(null, data);
@@ -320,36 +380,37 @@ let user = (function() {
 
     /**
      * Retrieves a user account from the data lake Amazon Cognito user pool.
-     * @param {integer} userId - Username of account to retrieve from the user pool.
+     * @param {string} userId - Username of account to retrieve from the user pool.
+     * @param {JSON} ticket - Data lake authorization ticket.
      * @param {getUser~requestCallback} cb - The callback that handles the response.
      */
-    user.prototype.getUser = function(userId, cb) {
+    user.prototype.getUser = function(userId, ticket, cb) {
+        if (userId != ticket.userid && ticket.role.toLowerCase() != 'admin') {
+            return cb({code: 401, message: "User is not authorized to perform the requested action."}, null);
+        }
 
         getUserPoolConfigInfo(function(err, poolinfo) {
-
             if (err) {
-                console.log(err);
                 return cb(err, null);
             }
 
             let params = {
                 UserPoolId: poolinfo,
-                /* required */
-                Username: userId /* required */
+                Username: userId
             };
 
             let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
             cognitoidentityserviceprovider.adminGetUser(params, function(err, data) {
                 if (err) {
                     console.log(err);
-                    return cb(err.message, null);
+                    return cb({code: 502, message: "Failed to get user."}, null);
                 }
 
                 let _user = {
                     user_id: data.Username,
                     display_name: '',
                     email: '',
-                    role: '',
+                    role: 'Member',
                     accesskey: '',
                     enabled: data.Enabled,
                     created_at: data.UserCreateDate,
@@ -360,6 +421,22 @@ let user = (function() {
                 });
                 if (_nm.length > 0) {
                     _user.display_name = _nm[0].Value;
+
+                } else {
+                    let _nm = _.where(data.UserAttributes, {
+                        Name: 'name'
+                    });
+                    let _fn = _.where(data.UserAttributes, {
+                        Name: 'family_name'
+                    });
+
+                    if (_nm.length > 0 && _fn.length > 0) {
+                        _user.display_name = `${_nm[0].Value} ${_fn[0].Value}`;
+                    } else if (_nm.length > 0) {
+                        _user.display_name = _nm[0].Value;
+                    } else if (_fn.length > 0) {
+                        _user.display_name = _fn[0].Value;
+                    }
                 }
 
                 let _ak = _.where(data.UserAttributes, {
@@ -396,7 +473,6 @@ let user = (function() {
      * @param {getUserPoolConfigInfo~requestCallback} cb - The callback that handles the response.
      */
     let getUserPoolConfigInfo = function(cb) {
-        console.log('Retrieving app-config information...');
         let params = {
             TableName: ddbTable,
             Key: {
@@ -407,13 +483,13 @@ let user = (function() {
         docClient.get(params, function(err, config) {
             if (err) {
                 console.log(err);
-                return cb('Error retrieving app configuration settings [ddb].', null);
+                return cb({code: 502, message: "Error retrieving app configuration settings [ddb]."}, null);
             }
 
             if (!_.isEmpty(config)) {
                 cb(null, config.Item.setting.idp);
             } else {
-                cb('No valid IDP app configuration data available.', null);
+                return cb({code: 502, message: "No valid IDP app configuration data available."}, null);
             }
         });
     };

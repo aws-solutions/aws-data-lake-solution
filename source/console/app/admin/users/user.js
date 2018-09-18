@@ -33,7 +33,8 @@ angular.module('dataLake.admin.user', ['dataLake.main', 'dataLake.utils', 'dataL
                 controller: 'AdminUserCtrl'
             }
         },
-        adminAuthenticate: true
+        adminAuthenticate: true,
+        activeWithFederation: true
     });
 }])
 
@@ -66,6 +67,7 @@ angular.module('dataLake.admin.user', ['dataLake.main', 'dataLake.utils', 'dataL
     $scope.groups['all'] = false;
     $scope.groups['groups'] = {};
 
+    $scope.federatedLogin = FEDERATED_LOGIN;
 
     var getUserDetails = function() {
         $blockUI.start();

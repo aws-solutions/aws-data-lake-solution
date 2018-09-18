@@ -19,6 +19,7 @@
 
 let AWS = require('aws-sdk');
 let AccessValidator = require('access-validator');
+let _ = require('underscore');
 
 let creds = new AWS.EnvironmentCredentials('AWS'); // Lambda provided credentials
 const cognitoConfig = {
@@ -48,19 +49,53 @@ let group = (function() {
      */
     group.prototype.listGroups = function(ticket, cb) {
 
-        let params = {
-            UserPoolId: process.env.USER_POOL_ID
-        };
-        let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider(cognitoConfig);
-        cognitoidentityserviceprovider.listGroups(params, function(err, data) {
-            if (err) {
-                console.log(err);
-                return cb({code: 502, message: "Failed to retrieves the group list."}, null);
-            }
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            let params = {
+                UserPoolId: process.env.USER_POOL_ID,
+                Username: ticket.userid
+            };
 
-            return cb(null, data);
-        });
+            let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
+            cognitoidentityserviceprovider.adminGetUser(params, function(err, data) {
+                if (err) {
+                    console.log(err);
+                    return cb(err.message, null);
+                }
 
+                let _groups = _.where(data.UserAttributes, {
+                    Name: 'custom:groups'
+                });
+                if (_groups.length > 0) {
+                    let _result = {"Groups": []};
+                    _groups = _groups[0].Value.replace('[','').replace(']','').split(',');
+                    for (var i = _groups.length - 1; i >= 0; i--) {
+                        _result.Groups.push({
+                            "GroupName": _groups[i],
+                            "UserPoolId": process.env.USER_POOL_ID,
+                            "Description": "Imported from AD",
+                            "LastModifiedDate": "",
+                            "CreationDate": ""
+                        });
+                    }
+
+                    return cb(null, _result);
+                }
+            });
+
+        } else {
+          let params = {
+              UserPoolId: process.env.USER_POOL_ID
+          };
+          let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider(cognitoConfig);
+          cognitoidentityserviceprovider.listGroups(params, function(err, data) {
+              if (err) {
+                  console.log(err);
+                  return cb({code: 502, message: "Failed to retrieves the group list."}, null);
+              }
+
+              return cb(null, data);
+          });
+        }
     };
 
     /**
@@ -71,6 +106,9 @@ let group = (function() {
      * @param {createGroup~requestCallback} cb - The callback that handles the response.
      */
     group.prototype.createGroup = function(groupName, description, ticket, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         accessValidator.validateAdminAccess(ticket, function(err, data) {
             if (err) {
@@ -107,6 +145,9 @@ let group = (function() {
      * @param {updateGroup~requestCallback} cb - The callback that handles the response.
      */
     group.prototype.updateGroup = function(groupName, description, ticket, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         accessValidator.validateAdminAccess(ticket, function(err, data) {
             if (err) {
@@ -140,6 +181,9 @@ let group = (function() {
      * @param {updateGroup~requestCallback} cb - The callback that handles the response.
      */
     group.prototype.removeUserFromGroup = function(userId, groupName, ticket, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         accessValidator.validateAdminAccess(ticket, function(err, data) {
             if (err) {
@@ -163,6 +207,7 @@ let group = (function() {
         });
 
     };
+
     /**
      * Retrieves a group from the data lake Amazon Cognito user pool.
      *
@@ -170,6 +215,9 @@ let group = (function() {
      * @param {getGroup~requestCallback} cb - The callback that handles the response.
      */
     group.prototype.getGroup = function(groupName, ticket, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         accessValidator.validateAdminAccess(ticket, function(err, data) {
             if (err) {
@@ -233,6 +281,9 @@ let group = (function() {
      * @param {deleteGroup~requestCallback} cb - The callback that handles the response.
      */
     group.prototype.deleteGroup = function(groupName, ticket, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         accessValidator.validateAdminAccess(ticket, function(err, data) {
             if (err) {
@@ -269,19 +320,54 @@ let group = (function() {
                 return cb(err, null);
             }
 
-            let params = {
-              UserPoolId: process.env.USER_POOL_ID,
-              Username: userId
-            };
-            let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider(cognitoConfig);
-            cognitoidentityserviceprovider.adminListGroupsForUser(params, function(err, data) {
-                if (err) {
-                    console.log(err);
-                    return cb({code: 502, message: `Failed to list the groups that the user belongs to.`}, null);
-                }
+            if(process.env.FEDERATED_LOGIN == 'true') {
+                let params = {
+                    UserPoolId: process.env.USER_POOL_ID,
+                    Username: userId
+                };
 
-                return cb(null, data);
-            });
+                let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
+                cognitoidentityserviceprovider.adminGetUser(params, function(err, data) {
+                    if (err) {
+                        console.log(err);
+                        return cb(err.message, null);
+                    }
+
+                    let _groups = _.where(data.UserAttributes, {
+                        Name: 'custom:groups'
+                    });
+                    if (_groups.length > 0) {
+                        let _result = {"Groups": []};
+                        _groups = _groups[0].Value.replace('[','').replace(']','').split(',');
+                        for (var i = _groups.length - 1; i >= 0; i--) {
+                            _result.Groups.push({
+                                "GroupName": _groups[i],
+                                "UserPoolId": process.env.USER_POOL_ID,
+                                "Description": "Imported from AD",
+                                "LastModifiedDate": "",
+                                "CreationDate": ""
+                            });
+                        }
+
+                        return cb(null, _result);
+                    }
+                });
+
+            } else {
+                let params = {
+                  UserPoolId: process.env.USER_POOL_ID,
+                  Username: userId
+                };
+                let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider(cognitoConfig);
+                cognitoidentityserviceprovider.adminListGroupsForUser(params, function(err, data) {
+                    if (err) {
+                        console.log(err);
+                        return cb({code: 502, message: `Failed to list the groups that the user belongs to.`}, null);
+                    }
+
+                    return cb(null, data);
+                });
+            }
         });
 
     };
@@ -294,6 +380,9 @@ let group = (function() {
      * @param {updateUserMembership~requestCallback} cb - The callback that handles the response.
      */
     group.prototype.updateUserMembership = function(userId, groupSet, ticket, cb) {
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            return cb({code: 404, message: "Function not valid for federated login."}, null);
+        }
 
         accessValidator.validateAdminAccess(ticket, function(err, data) {
             if (err) {

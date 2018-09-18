@@ -6,9 +6,14 @@ Parameters:
     UserPoolId:
         Type: String
         Description: Id of data lake Amazon Cognito User Pool
+    UserPoolClientId:
+        Type: String
+        Description: Id of data lake Amazon Cognito App Client
     SourceS3Bucket:
         Type: String
     SourceKeyPrefix:
+        Type: String
+    FederatedLogin:
         Type: String
 
 Resources:
@@ -27,6 +32,7 @@ Resources:
                             AWS: !Join ["", ["arn:aws:iam::", Ref: "AWS::AccountId", ":root"]]
                         Action:
                             - "kms:*"
+                        # Resource being created now. No target key id defined yet.
                         Resource: "*"
 
     DataLakeKmsKeyAlias:
@@ -194,6 +200,8 @@ Resources:
             Environment:
                 Variables:
                     USER_POOL_ID: !Ref "UserPoolId"
+                    USER_POOL_CLIENT_ID: !Ref "UserPoolClientId"
+                    FEDERATED_LOGIN: !Ref "FederatedLogin"
 
     DataLakeSearchRole:
         Type: "AWS::IAM::Role"
@@ -266,12 +274,14 @@ Resources:
                         Effect: "Allow"
                         Action:
                             - "cognito-idp:AdminListGroupsForUser"
+                            - "cognito-idp:AdminGetUser"
                         Resource:
                             !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/", Ref: UserPoolId]]
                     -
                         Effect: "Allow"
                         Action:
                             - "glue:GetTables"
+                        # At the time of writing this service does not have ARNs, so * will be used
                         Resource: "*"
             Roles:
                 -
@@ -296,6 +306,7 @@ Resources:
             Environment:
                 Variables:
                     USER_POOL_ID: !Ref "UserPoolId"
+                    FEDERATED_LOGIN: !Ref "FederatedLogin"
 
     DataLakeGlueCrawlerEventRule:
         Type: "AWS::Events::Rule"
@@ -499,6 +510,7 @@ Resources:
                         Effect: "Allow"
                         Action:
                             - "cognito-idp:AdminListGroupsForUser"
+                            - "cognito-idp:AdminGetUser"
                         Resource:
                             !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/", Ref: UserPoolId]]
             Roles:
@@ -524,6 +536,7 @@ Resources:
             Environment:
                 Variables:
                     USER_POOL_ID: !Ref "UserPoolId"
+                    FEDERATED_LOGIN: !Ref "FederatedLogin"
 
     DataLakePackageCrawlerRole:
         Type: "AWS::IAM::Role"
@@ -567,6 +580,7 @@ Resources:
                             - "iam:ListRolePolicies"
                             - "iam:GetRole"
                             - "iam:GetRolePolicy"
+                        # Policy based on http://amzn.to/2G6NlG3 and http://amzn.to/2oYQCza
                         Resource: "*"
                     -
                         Effect: "Allow"
@@ -750,6 +764,7 @@ Resources:
                             - "glue:CreateCrawler"
                             - "glue:GetCrawler"
                             - "glue:UpdateCrawler"
+                        # At the time of writing this service does not have ARNs, so * will be used
                         Resource: "*"
                     -
                         Effect: "Allow"
@@ -768,6 +783,7 @@ Resources:
                             - "athena:RunQuery"
                             - "athena:StartQueryExecution"
                             - "athena:StopQueryExecution"
+                        # At the time of writing this service does not have ARNs, so * will be used
                         Resource: "*"
                     -
                         Effect: "Allow"
@@ -793,6 +809,7 @@ Resources:
                         Effect: "Allow"
                         Action:
                             - "cognito-idp:AdminListGroupsForUser"
+                            - "cognito-idp:AdminGetUser"
                         Resource:
                             !Join ["", ["arn:aws:cognito-idp:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":userpool/", Ref: UserPoolId]]
             Roles:
@@ -822,6 +839,7 @@ Resources:
                         - Arn
                     ACCOUNT_ID: !Ref "AWS::AccountId"
                     USER_POOL_ID: !Ref "UserPoolId"
+                    FEDERATED_LOGIN: !Ref "FederatedLogin"
 
     DataLakeProfileRole:
         Type: "AWS::IAM::Role"
@@ -913,6 +931,9 @@ Resources:
                     - "Arn"
             Runtime: "nodejs8.10"
             Timeout: "300"
+            Environment:
+                Variables:
+                    FEDERATED_LOGIN: !Ref "FederatedLogin"
 
     DataLakeAuthorizerRole:
         Type: "AWS::IAM::Role"

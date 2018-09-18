@@ -24,8 +24,6 @@ const dynamoConfig = {
     credentials: creds,
     region: process.env.AWS_REGION
 };
-const docClient = new AWS.DynamoDB.DocumentClient(dynamoConfig);
-const ddbTable = 'data-lake-packages';
 
 /**
  * Helper function to interact with AWS Glue for data lake cfn custom resource.

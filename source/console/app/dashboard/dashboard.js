@@ -33,7 +33,8 @@ angular.module('dataLake.dashboard', ['dataLake.main', 'dataLake.utils'])
                 controller: 'DashboardCtrl'
             }
         },
-        authenticate: true
+        authenticate: true,
+        activeWithFederation: true
     });
 }])
 

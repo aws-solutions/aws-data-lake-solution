@@ -7,7 +7,7 @@
     </awsui-alert>
 </section>
 <div class="clearfix">
-    <awsui-button variant="primary" text="Invite User" href="#admin/invite"></awsui-button>
+    <awsui-button variant="primary" text="Invite User" href="#admin/invite" ng-show="!federatedLogin"></awsui-button>
     <awsui-button-group class="awsui-util-f-r">
         <awsui-button icon="refresh" ng-click="refresh()"></awsui-button>
         <awsui-button icon="question-circle" go-click="http://docs.awssolutionsbuilder.com/data-lake/admin-guide/working-with-users"></awsui-button>
@@ -17,26 +17,28 @@
     <table class="grid">
         <thead>
             <th></th>
-            <th>Email</th>
-            <th>Name</th>
-            <th>Role</th>
-            <th>Enabled</th>
-            <th>Registration Status</th>
+            <th ng-show="federatedLogin">Username</th>
+            <th ng-show="!federatedLogin">Email</th>
+            <th ng-show="!federatedLogin">Name</th>
+            <th ng-show="!federatedLogin">Role</th>
+            <th ng-show="!federatedLogin">Enabled</th>
+            <th ng-show="!federatedLogin">Registration Status</th>
         </thead>
         <tbody ng-show="users.length > 0">
             <tr ng-repeat="user in users">
                 <td style="width:25px;">
                     <awsui-button icon="pencil" text="" variant="standalone-icon"
-                                  label="remove" href="#admin/users/{{user.user_id}}"></awsui-button>
+                                  label="remove" href="#/admin/users/{{user.user_id | encodeURIComponent}}"></awsui-button>
                 </td>
-                <td>{{user.email}}</td>
-                <td>{{user.name}}</td>
-                <td>{{user.role}}</td>
-                <td>
+                <td ng-show="federatedLogin"><a href="#/admin/users/{{user.user_id | encodeURIComponent}}">{{user.user_id}}</a></td>
+                <td ng-show="!federatedLogin">{{user.email}}</td>
+                <td ng-show="!federatedLogin">{{user.name}}</td>
+                <td ng-show="!federatedLogin">{{user.role}}</td>
+                <td ng-show="!federatedLogin">
                     <awsui-label label="True" type="success" ng-show="user.enabled"></awsui-label>
                     <awsui-label label="False" type="disabled" ng-show="!user.enabled"></awsui-label>
                 </td>
-                <td><span class="{{user.status == 'CONFIRMED' ? 'awsui-status-positive' : 'awsui-status-warning'}}">{{user.status == 'CONFIRMED' ? 'Confirmed' : 'Pending'}}</span></td>
+                <td ng-show="!federatedLogin"><span class="{{user.status == 'CONFIRMED' ? 'awsui-status-positive' : 'awsui-status-warning'}}">{{user.status == 'CONFIRMED' ? 'Confirmed' : 'Pending'}}</span></td>
             </tr>
         </tbody>
         <tbody ng-show="users.length == 0">

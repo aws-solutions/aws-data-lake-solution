@@ -49,7 +49,7 @@ exports.handler = function(event, context, callback) {
 
         if (err) {
             console.log(err);
-            return cb(err, null);
+            return callback(err, null);
         }
 
         userPoolId = config.Item.setting.idp;
@@ -94,7 +94,7 @@ exports.handler = function(event, context, callback) {
             } else {
                 //PEMs are already downloaded, continue with validating the token
                 ValidateToken(pems, event, callback);
-            };
+            }
         } else if (event.authorizationToken.startsWith('ak:')) {
             ValidateApiToken(event, callback);
         } else {
@@ -138,7 +138,7 @@ function getConfigInfo(cb) {
 
         return cb(null, data);
     });
-};
+}
 
 /**
  * Validates the user represented in the request Auth header token is authorized. The token
@@ -203,11 +203,6 @@ function ValidateToken(pems, event, callback) {
             apiOptions.region = tmp[3];
             apiOptions.restApiId = apiGatewayArnTmp[0];
             apiOptions.stage = apiGatewayArnTmp[1];
-            let method = apiGatewayArnTmp[2];
-            let resource = '/'; // root resource
-            if (apiGatewayArnTmp[3]) {
-                resource += apiGatewayArnTmp[3];
-            }
 
             //For more information on specifics of generating policy, refer to blueprint for API Gateway's
             //Custom authorizer in Lambda console
@@ -269,11 +264,6 @@ function ValidateApiToken(event, callback) {
                                 apiOptions.region = tmp[3];
                                 apiOptions.restApiId = apiGatewayArnTmp[0];
                                 apiOptions.stage = apiGatewayArnTmp[1];
-                                let method = apiGatewayArnTmp[2];
-                                let resource = '/'; // root resource
-                                if (apiGatewayArnTmp[3]) {
-                                    resource += apiGatewayArnTmp[3];
-                                }
 
                                 let policy = new AuthPolicy(user.sub, awsAccountId, apiOptions);
                                 policy.allowAllMethods();

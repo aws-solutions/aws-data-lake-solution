@@ -2,15 +2,6 @@ AWSTemplateFormatVersion: "2010-09-09"
 
 Description: "The AWS CloudFormation template for deployment of the AWS Data Lake storage resources"
 
-Parameters:
-    ESAccessIpAddress:
-        Type: String
-        Description: IP CIDR range that can access the Amazon Elasticsearch Cluster
-        MinLength: 9
-        MaxLength: 18
-        # AllowedPattern: "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})"
-        # ConstraintDescription: "must be a valid IP CIDR range of the form x.x.x.x/x."
-
 Mappings:
     RegionMap:
         us-east-1:
@@ -187,6 +178,60 @@ Resources:
                 WriteCapacityUnits: 5
             TableName: "data-lake-cart"
 
+    DataLakeESLogGroup:
+        Type: AWS::Logs::LogGroup
+        Properties:
+            LogGroupName: "/datalake/es-log"
+
+    CognitoKibanaIdentityPool:
+        Type: AWS::Cognito::IdentityPool
+        Properties:
+            IdentityPoolName: "data lake kibana"
+            AllowUnauthenticatedIdentities: true
+
+    CognitoKibanaConfigureRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-kibana-configure-role", Ref: "AWS::Region" ]]
+            ManagedPolicyArns:
+                - arn:aws:iam::aws:policy/AmazonESCognitoAccess
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Service: "es.amazonaws.com"
+                        Action:
+                            - "sts:AssumeRole"
+
+    CognitoKibanaAccessRole:
+        Type: "AWS::IAM::Role"
+        Properties:
+            RoleName: !Join ["-", ["data-lake-kibana-access-role", Ref: "AWS::Region" ]]
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17"
+                Statement:
+                    -
+                        Effect: "Allow"
+                        Principal:
+                            Federated: "cognito-identity.amazonaws.com"
+                        Action:
+                            - "sts:AssumeRoleWithWebIdentity"
+                        Condition:
+                            StringEquals:
+                                "cognito-identity.amazonaws.com:aud": !Ref CognitoKibanaIdentityPool
+                            "ForAnyValue:StringLike":
+                                "cognito-identity.amazonaws.com:amr": authenticated
+
+    CognitoKibanaAccessRoleAttachment:
+        Type: AWS::Cognito::IdentityPoolRoleAttachment
+        Properties:
+            IdentityPoolId: !Ref CognitoKibanaIdentityPool
+            Roles:
+                authenticated: !GetAtt CognitoKibanaAccessRole.Arn
+                unauthenticated: !GetAtt CognitoKibanaAccessRole.Arn
+
     DataLakeElasticsearchCluster:
         Type: "AWS::Elasticsearch::Domain"
         Properties:
@@ -212,14 +257,12 @@ Resources:
                     -
                         Effect: "Allow"
                         Principal:
-                            AWS: "*"
+                            AWS:
+                                - !GetAtt CognitoKibanaAccessRole.Arn
                         Action:
                                 - "es:*"
                         Resource:
                             !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/data-lake/*"]]
-                        Condition:
-                            IpAddress:
-                                aws:SourceIp: !Ref ESAccessIpAddress
             AdvancedOptions:
                 rest.action.multi.allow_explicit_index: true
 
@@ -227,3 +270,15 @@ Outputs:
     EsCluster:
         Description: "Elasticsearch cluster domain endpoint"
         Value: !GetAtt DataLakeElasticsearchCluster.DomainEndpoint
+
+    ConfigureRoleArn:
+        Description: "Kibana Configuration Role ARN"
+        Value: !GetAtt CognitoKibanaConfigureRole.Arn
+
+    DataLakeESLogGroup:
+        Description: "Elasticsearch Cluster Log Group ARN"
+        Value: !GetAtt DataLakeESLogGroup.Arn
+
+    CognitoKibanaIdentityPool:
+        Description: "Cognito kibana identity pool"
+        Value: !Ref CognitoKibanaIdentityPool

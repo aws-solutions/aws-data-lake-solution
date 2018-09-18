@@ -44,7 +44,8 @@ angular.module(
                 controller: 'SearchCtrl'
             }
         },
-        authenticate: true
+        authenticate: true,
+        activeWithFederation: true
     });
 }])
 
@@ -195,7 +196,6 @@ angular.module(
                     return;
                 }
 
-                console.log(data);
                 $blockUI.stop();
             });
         });
@@ -223,7 +223,6 @@ angular.module(
                     return;
                 }
 
-                console.log(data);
                 $blockUI.stop();
             });
         });

@@ -80,7 +80,7 @@ let AccessValidator = (function() {
             }
 
             else {
-                let isAdmin = (ticket.role == 'Admin');
+                let isAdmin = (ticket.role.toLowerCase() == 'admin');
                 let isPackageOwner = (data.Item.owner == ticket.userid);
 
                 if (isAdmin || isPackageOwner) {
@@ -141,7 +141,7 @@ let AccessValidator = (function() {
      */
     AccessValidator.prototype.validateAdminAccess = function(ticket, cb) {
 
-        if (ticket.auth_status != 'authorized' || ticket.role != 'Admin') {
+        if (ticket.auth_status != 'authorized' || ticket.role.toLowerCase() != 'admin') {
             let message = "Failed to validade if the user permission. Check if you are authorized to access this service.";
             console.log(new Error(message));
             return cb({code: 401, message: message}, null);
@@ -160,19 +160,54 @@ let AccessValidator = (function() {
      */
     AccessValidator.prototype.getUserGroups = function(userId, cb) {
 
-        let params = {
-          UserPoolId: process.env.USER_POOL_ID,
-          Username: userId
-        };
-        let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider(cognitoConfig);
-        cognitoidentityserviceprovider.adminListGroupsForUser(params, function(err, data) {
-            if (err) {
-                console.log(err);
-                return cb({code: 502, message: `Failed to list the groups that the user belongs to.`}, null);
-            }
+        if(process.env.FEDERATED_LOGIN == 'true') {
+            let params = {
+                UserPoolId: process.env.USER_POOL_ID,
+                Username: userId
+            };
 
-            return cb(null, data);
-        });
+            let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
+            cognitoidentityserviceprovider.adminGetUser(params, function(err, data) {
+                if (err) {
+                    console.log(err);
+                    return cb(err.message, null);
+                }
+
+                let _groups = _.where(data.UserAttributes, {
+                    Name: 'custom:groups'
+                });
+                if (_groups.length > 0) {
+                    let _result = {"Groups": []};
+                    _groups = _groups[0].Value.replace('[','').replace(']','').split(',');
+                    for (var i = _groups.length - 1; i >= 0; i--) {
+                        _result.Groups.push({
+                            "GroupName": _groups[i],
+                            "UserPoolId": process.env.USER_POOL_ID,
+                            "Description": "Imported from AD",
+                            "LastModifiedDate": "",
+                            "CreationDate": ""
+                        });
+                    }
+
+                    return cb(null, _result);
+                }
+            });
+
+        } else {
+            let params = {
+              UserPoolId: process.env.USER_POOL_ID,
+              Username: userId
+            };
+            let cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider(cognitoConfig);
+            cognitoidentityserviceprovider.adminListGroupsForUser(params, function(err, data) {
+                if (err) {
+                    console.log(err);
+                    return cb({code: 502, message: `Failed to list the groups that the user belongs to.`}, null);
+                }
+
+                return cb(null, data);
+            });
+        }
 
     };
 
