@@ -47,10 +47,10 @@ mkdir -p $dist_dir
 echo "------------------------------------------------------------------------------"
 echo "[Packing] Templates"
 echo "------------------------------------------------------------------------------"
-echo "cp $template_dir/data-lake-deploy.yaml $dist_dir/data-lake-deploy.template"
-cp $template_dir/data-lake-deploy.yaml $dist_dir/data-lake-deploy.template
-echo "cp $template_dir/data-lake-deploy-federated.yaml $dist_dir/data-lake-deploy-federated.template"
-cp $template_dir/data-lake-deploy-federated.yaml $dist_dir/data-lake-deploy-federated.template
+echo "cp $template_dir/data-lake-deploy.template $dist_dir/data-lake-deploy.template"
+cp $template_dir/data-lake-deploy.template $dist_dir/data-lake-deploy.template
+echo "cp $template_dir/data-lake-deploy-federated.template $dist_dir/data-lake-deploy-federated.template"
+cp $template_dir/data-lake-deploy-federated.template $dist_dir/data-lake-deploy-federated.template
 echo "cp $template_dir/data-lake-storage.yaml $dist_dir"
 cp $template_dir/data-lake-storage.yaml $dist_dir
 echo "cp $template_dir/data-lake-services.yaml $dist_dir"
