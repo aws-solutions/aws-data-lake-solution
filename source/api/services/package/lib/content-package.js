@@ -119,7 +119,7 @@ let contentPackage = (function() {
                         }
                     }
                 }
-
+                shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ$@');
                 let _package = _body.package;
                 let _newpackage = {
                     package_id: shortid.generate(),
