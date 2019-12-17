@@ -54,40 +54,51 @@ Resources:
 
     DataLakeSettingsDynamo:
         Type: "AWS::DynamoDB::Table"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Table name required for referencing other resources and code that will be deployed on the infrastructure"
         DeletionPolicy: "Delete"
         Properties:
             AttributeDefinitions:
                 -
                     AttributeName: "setting_id"
                     AttributeType: "S"
+            BillingMode: "PAY_PER_REQUEST"
             KeySchema:
                 -
                     AttributeName: "setting_id"
                     KeyType: "HASH"
-            ProvisionedThroughput:
-                ReadCapacityUnits: 5
-                WriteCapacityUnits: 5
             TableName: "data-lake-settings"
 
     DataLakePackagesDynamo:
         Type: "AWS::DynamoDB::Table"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Table name required for referencing other resources and code that will be deployed on the infrastructure"
         DeletionPolicy: "Delete"
         Properties:
             AttributeDefinitions:
                 -
                     AttributeName: "package_id"
                     AttributeType: "S"
+            BillingMode: "PAY_PER_REQUEST"
             KeySchema:
                 -
                     AttributeName: "package_id"
                     KeyType: "HASH"
-            ProvisionedThroughput:
-                ReadCapacityUnits: 5
-                WriteCapacityUnits: 5
             TableName: "data-lake-packages"
 
     DataLakeMetadataDynamo:
         Type: "AWS::DynamoDB::Table"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Table name required for referencing other resources and code that will be deployed on the infrastructure"
         DeletionPolicy: "Delete"
         Properties:
             AttributeDefinitions:
@@ -97,6 +108,7 @@ Resources:
                 -
                     AttributeName: "metadata_id"
                     AttributeType: "S"
+            BillingMode: "PAY_PER_REQUEST"
             KeySchema:
                 -
                     AttributeName: "package_id"
@@ -104,13 +116,15 @@ Resources:
                 -
                     AttributeName: "metadata_id"
                     KeyType: "RANGE"
-            ProvisionedThroughput:
-                ReadCapacityUnits: 5
-                WriteCapacityUnits: 5
             TableName: "data-lake-metadata"
 
     DataLakeKeysDynamo:
         Type: "AWS::DynamoDB::Table"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Table name required for referencing other resources and code that will be deployed on the infrastructure"        
         DeletionPolicy: "Delete"
         Properties:
             AttributeDefinitions:
@@ -120,6 +134,7 @@ Resources:
                 -
                     AttributeName: "user_id"
                     AttributeType: "S"
+            BillingMode: "PAY_PER_REQUEST"
             KeySchema:
                 -
                     AttributeName: "access_key_id"
@@ -127,13 +142,15 @@ Resources:
                 -
                     AttributeName: "user_id"
                     KeyType: "RANGE"
-            ProvisionedThroughput:
-                ReadCapacityUnits: 5
-                WriteCapacityUnits: 5
             TableName: "data-lake-keys"
 
     DataLakeDatasetsDynamo:
         Type: "AWS::DynamoDB::Table"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Table name required for referencing other resources and code that will be deployed on the infrastructure"        
         DeletionPolicy: "Delete"
         Properties:
             AttributeDefinitions:
@@ -143,6 +160,7 @@ Resources:
                 -
                     AttributeName: "dataset_id"
                     AttributeType: "S"
+            BillingMode: "PAY_PER_REQUEST"
             KeySchema:
                 -
                     AttributeName: "package_id"
@@ -150,13 +168,15 @@ Resources:
                 -
                     AttributeName: "dataset_id"
                     KeyType: "RANGE"
-            ProvisionedThroughput:
-                ReadCapacityUnits: 5
-                WriteCapacityUnits: 5
             TableName: "data-lake-datasets"
 
     DataLakeCartDynamo:
         Type: "AWS::DynamoDB::Table"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Table name required for referencing other resources and code that will be deployed on the infrastructure"        
         DeletionPolicy: "Delete"
         Properties:
             AttributeDefinitions:
@@ -166,6 +186,7 @@ Resources:
                 -
                     AttributeName: "item_id"
                     AttributeType: "S"
+            BillingMode: "PAY_PER_REQUEST"
             KeySchema:
                 -
                     AttributeName: "user_id"
@@ -173,9 +194,6 @@ Resources:
                 -
                     AttributeName: "item_id"
                     KeyType: "RANGE"
-            ProvisionedThroughput:
-                ReadCapacityUnits: 5
-                WriteCapacityUnits: 5
             TableName: "data-lake-cart"
 
     DataLakeESLogGroup:
@@ -191,6 +209,11 @@ Resources:
 
     CognitoKibanaConfigureRole:
         Type: "AWS::IAM::Role"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Explicit names to avoid cyclic dependencies, easy referencing and better readeability"
         Properties:
             RoleName: !Join ["-", ["data-lake-kibana-configure-role", Ref: "AWS::Region" ]]
             ManagedPolicyArns:
@@ -207,6 +230,11 @@ Resources:
 
     CognitoKibanaAccessRole:
         Type: "AWS::IAM::Role"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Explicit names to avoid cyclic dependencies, easy referencing and better readeability"        
         Properties:
             RoleName: !Join ["-", ["data-lake-kibana-access-role", Ref: "AWS::Region" ]]
             AssumeRolePolicyDocument:
@@ -234,6 +262,11 @@ Resources:
 
     DataLakeElasticsearchCluster:
         Type: "AWS::Elasticsearch::Domain"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Table name required for referencing other resources and code that will be deployed on the infrastructure"       
         Properties:
             DomainName: "data-lake"
             ElasticsearchVersion: "6.2"

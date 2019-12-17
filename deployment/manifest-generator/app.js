@@ -1,15 +1,15 @@
 /*********************************************************************************************************************
- *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://aws.amazon.com/asl/                                                                                    *
- *                                                                                                                    *
- *  or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+*  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+*                                                                                                                    *
+*  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
+*  with the License. A copy of the License is located at                                                             *
+*                                                                                                                    *
+*      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
+*                                                                                                                    *
+*  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
+*  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
+*  and limitations under the License.                                                                                *
+*********************************************************************************************************************/
 
 /**
  * @author Solution Builders
@@ -60,11 +60,13 @@ let _filelist = [];
 let _manifest = {
     files: []
 };
-walkSync('../dist/site', _filelist);
+walkSync(process.argv[2]+'/site', _filelist);
 
 for (let i = 0; i < _filelist.length; i++) {
-    _manifest.files.push(_filelist[i].replace('../dist/site/', ''));
+    _manifest.files.push(_filelist[i].replace(process.argv[2]+'/site/', ''));
 };
 
 console.log(_manifest);
-fs.writeFile('../dist/data-lake-site-manifest.json', JSON.stringify(_manifest, null, 4));
+fs.writeFile(process.argv[2]+'/data-lake-site-manifest.json', JSON.stringify(_manifest, null), function (err, data) {
+    if (err) throw err;
+});

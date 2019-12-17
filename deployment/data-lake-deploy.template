@@ -38,7 +38,9 @@ Mappings:
     SourceCode:
         General:
             S3Bucket: "%%BUCKET_NAME%%"
-            KeyPrefix: "data-lake/%%VERSION%%"
+            KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"
+            S3TemplateBucket: "%%TEMPLATE_BUCKET_NAME%%"
+            SolutionName: "%%SOLUTION_NAME%%"
     Solution:
         Data:
             SendAnonymousUsageData: "Yes"
@@ -47,7 +49,7 @@ Resources:
     DataLakeStorageStack:
         Type: "AWS::CloudFormation::Stack"
         Properties:
-            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-storage.yaml"]]
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-storage.template"]]
 
     DataLakeUserPool:
         Type: "Custom::LoadLambda"
@@ -64,7 +66,7 @@ Resources:
         DependsOn: "DataLakeUserPool"
         Type: "AWS::CloudFormation::Stack"
         Properties:
-            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]] , !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-services.yaml"]]
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-services.template"]]
             Parameters:
                 UserPoolId: !GetAtt DataLakeUserPool.UserPoolId
                 UserPoolClientId: !GetAtt DataLakeUserPool.UserPoolClientId
@@ -73,10 +75,11 @@ Resources:
                 FederatedLogin: false
 
     DataLakeApiStack:
-        DependsOn: "DataLakeServicesStack"
+        DependsOn: 
+            - "DataLakeServicesStack"
         Type: "AWS::CloudFormation::Stack"
         Properties:
-            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-api.yaml"]]
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-api.template"]]
             Parameters:
                 AuthorizerArn: !GetAtt DataLakeServicesStack.Outputs.AuthorizerArn
                 AdminArn: !GetAtt DataLakeServicesStack.Outputs.AdminArn
@@ -233,6 +236,13 @@ Resources:
 
     DataLakeHelperRole:
         Type: "AWS::IAM::Role"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                  - id: W28
+                    reason: "Explicit role name to avoid cyclic dependency, easy referencing and better readeability of code"
+                  - id: W11
+                    reason: "Resources for Cognito pool have not been created so far. Hence '*'"
         Properties:
             RoleName: !Join ["-", ["data-lake-helper-role", Ref: "AWS::Region" ]]
             AssumeRolePolicyDocument:
@@ -374,22 +384,112 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeHelperRole"
                     - "Arn"
-            Runtime: "nodejs8.10"
+            Runtime: "nodejs12.x"
             Timeout: "300"
 
     DataLakeDeployment:
         DependsOn: "DataLakeApiStack"
         Type: "AWS::ApiGateway::Deployment"
         Properties:
+            StageDescription:
+                AccessLogSetting:
+                    DestinationArn: !Join [":", ["arn:aws:logs", Ref: "AWS::Region", Ref: "AWS::AccountId", !Join ["/",["log-group:API-Gateway-Execution-Logs-DataLakeApi", !GetAtt "DataLakeApiStack.Outputs.ApiId"]]]]
+                    Format: $context.identity.sourceIp $context.identity.caller $context.identity.user [$context.requestTime] "$context.httpMethod $context.resourcePath $context.protocol" $context.status $context.responseLength $context.requestId
             RestApiId: !GetAtt DataLakeApiStack.Outputs.ApiId
             Description: "Production"
             StageName: "prod"
+
+    ApiLoggingRole:
+        Type: AWS::IAM::Role
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                  - id: W11
+                    reason: API Gateway requires these permissions for CloudWatch Logging (https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html#set-up-access-logging-permissions)
+        Properties:
+            AssumeRolePolicyDocument:
+                Version: "2012-10-17" 
+                Statement:
+                    - Effect: "Allow"
+                      Principal:
+                        Service:
+                            - "apigateway.amazonaws.com"
+                      Action:
+                        - "sts:AssumeRole"
+            Path: "/"
+            Policies: 
+                - PolicyName: "api-gateway-logging"
+                  PolicyDocument:
+                    Version: "2012-10-17"
+                    Statement:
+                        - Effect: "Allow"
+                          Action:
+                            - "logs:CreateLogGroup"
+                            - "logs:CreateLogStream"
+                            - "logs:DescribeLogGroups"
+                            - "logs:DescribeLogStreams"
+                            - "logs:PutLogEvents"
+                            - "logs:GetLogEvents"
+                            - "logs:FilterLogEvents"
+                          Resource: !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*"
+ 
+    ApiAccountConfig: 
+        Type: "AWS::ApiGateway::Account" 
+        Properties: 
+            CloudWatchRoleArn: !GetAtt ApiLoggingRole.Arn 
 
     ConsoleCFOriginAccessIdentity:
         Type: "AWS::CloudFront::CloudFrontOriginAccessIdentity"
         Properties:
             CloudFrontOriginAccessIdentityConfig:
                 Comment: !GetAtt DataLakeUuid.UUID
+
+    CFDataLakeAccessBucket:
+        Type: AWS::S3::Bucket
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W51
+                      reason: "The bucket is not public. When using the CF template in PROD, create a bucket policy to allow only administrators/ auditors access to the bucket"
+        DeletionPolicy: Retain
+        Properties:
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                    - ServerSideEncryptionByDefault:
+                        SSEAlgorithm: AES256
+            BucketName: !Join ["-", [!FindInMap ["SourceCode", "General", "SolutionName"], !Ref "AWS::AccountId", !Ref "AWS::Region", "cf-access-log"]]
+            LoggingConfiguration:
+                DestinationBucketName: !Ref S3LoggingBucket
+                LogFilePrefix: "s3-access-logs-"
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
+                
+
+    S3LoggingBucket:
+        DeletionPolicy: Retain
+        Type: AWS::S3::Bucket
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                  - id: W35
+                    reason: "This S3 bucket is used as the destination for storing access logs"
+                  - id: W51
+                    reason: "The bucket is not public. When using the CF template in PROD, create a bucket policy to allow only administrators/ auditors access to the bucket"
+        Properties:
+            BucketName: !Join ["-", [!FindInMap ["SourceCode", "General", "SolutionName"], !Ref "AWS::AccountId", !Ref "AWS::Region", "s3-access-log"]]
+            AccessControl: LogDeliveryWrite
+            BucketEncryption:
+                ServerSideEncryptionConfiguration:
+                    - ServerSideEncryptionByDefault:
+                        SSEAlgorithm: AES256
+            PublicAccessBlockConfiguration:
+                BlockPublicAcls: true
+                BlockPublicPolicy: true
+                IgnorePublicAcls: true
+                RestrictPublicBuckets: true
 
     ConsoleCFDistribution:
         DependsOn:
@@ -424,6 +524,10 @@ Resources:
             DefaultRootObject: index.html
             HttpVersion: http2
             IPV6Enabled: true
+            Logging:
+                Bucket: !Join [".", [Ref: "CFDataLakeAccessBucket", "s3.amazonaws.com"]]
+                IncludeCookies: true
+                Prefix: "cf-dl-"
             Origins:
                 -
                     DomainName: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId", ".s3.", Ref: "AWS::Region", ".amazonaws.com"]]
@@ -433,6 +537,7 @@ Resources:
             ViewerCertificate:
                 CloudFrontDefaultCertificate: true
             Enabled: true
+
 
     AppVariables:
         DependsOn:

@@ -5,18 +5,19 @@
   "author": {
     "name": "aws-solutions-builder"
   },
+  "license": "Apache-2.0",
   "private": "true",
   "main": "access-validator.js",
   "dependencies": {
     "underscore": "*"
   },
   "devDependencies": {
-    "aws-sdk-mock": "*",
-    "chai": "*",
+    "aws-sdk-mock": "^4.5.0",
+    "chai": "^4.2.0",
     "chai-things": "^0.2.0",
-    "mocha": "*",
+    "mocha": "^6.2.2",
     "sinon": "^2.4.1",
-    "sinon-chai": "*"
+    "sinon-chai": "^3.3.0"
   },
   "scripts": {
     "test": "mocha *.spec.js"

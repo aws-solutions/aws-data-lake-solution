@@ -1,15 +1,15 @@
 /*********************************************************************************************************************
- *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://aws.amazon.com/asl/                                                                                    *
- *                                                                                                                    *
- *  or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+*  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+*                                                                                                                    *
+*  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
+*  with the License. A copy of the License is located at                                                             *
+*                                                                                                                    *
+*      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
+*                                                                                                                    *
+*  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
+*  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
+*  and limitations under the License.                                                                                *
+*********************************************************************************************************************/
 
 /**
  * @author Solution Builders
@@ -241,19 +241,32 @@ let manifest = (function() {
         };
 
         if (index < items.length) {
-            if (items[index].content_type === 'include-path') {
-                _content.include_path.push({
-                    bucket: items[index].s3_bucket,
-                    key: items[index].s3_key
-                });
+            //if (items[index].content_type === 'include-path') {
 
-                generateAccessContents(items, index + 1, format, expiration, function(err, content) {
-                    _content.entries = _content.entries.concat(content.entries);
-                    _content.include_path = _content.include_path.concat(content.include_path);
-                    return cb(null, _content);
-                });
+                // if (format === 'signed-url') {
+                //     let params = {
+                //         Bucket: items[index].s3_bucket,
+                //         Key: items[index].s3_key,
+                //         Expires: expiration
+                //     };
+                //     var _url = s3.getSignedUrl('getObject', params);
+                //     _content.entries.push({
+                //         url: _url
+                //     });                            
+                // } else {
+                //     _content.include_path.push({
+                //         bucket: items[index].s3_bucket,
+                //         key: items[index].s3_key
+                //     });
+                // }
 
-            } else if (items[index].type === 'dataset') {
+                // generateAccessContents(items, index + 1, format, expiration, function(err, content) {
+                //     _content.entries = _content.entries.concat(content.entries);
+                //     _content.include_path = _content.include_path.concat(content.include_path);
+                //     return cb(null, _content);
+                // });
+            //} else
+            if (items[index].type === 'dataset' || items[index].content_type === 'include-path') {
                 checkObjectExists(items[index].s3_bucket, items[index].s3_key, function(err, data) {
                     if (data) {
                         if (format === 'signed-url') {

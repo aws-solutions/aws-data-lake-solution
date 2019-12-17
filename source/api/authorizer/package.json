@@ -5,27 +5,28 @@
     "author": {
         "name": "aws-solutions-builder"
     },
+    "license": "Apache-2.0",
     "version": "0.0.1",
     "private": "true",
     "dependencies": {
-        "moment": "*",
-        "jsonwebtoken": "*",
-        "jwk-to-pem": "*",
-        "request": "*",
-        "underscore": "*",
-        "js-base64": "*"
+        "moment": "^2.22.2",
+        "underscore": "^1.9.1",
+        "jsonwebtoken": "^8.3.0",
+        "jwk-to-pem": "^2.0.0",
+        "request": "^2.88.0",
+        "js-base64": "^2.4.9"
     },
     "devDependencies": {
         "grunt": "^0.4.5",
         "grunt-aws-lambda": "^0.13.0",
-        "grunt-pack": "0.1.*",
-        "grunt-contrib-clean": "*",
-        "chai": "*",
+        "grunt-pack": "^0.1.*",
+        "grunt-contrib-clean": "^2.0.0",
+        "chai": "^4.2.0",
         "sinon": "^2.4.1",
-        "sinon-chai": "*",
-        "mocha": "*",
-        "aws-sdk-mock": "*",
-        "npm-run-all": "*"
+        "sinon-chai": "^3.3.0",
+        "mocha": "^6.2.2",
+        "aws-sdk-mock": "^4.5.0",
+        "npm-run-all": "^4.1.5"
     },
     "scripts": {
         "test": "mocha *.spec.js",

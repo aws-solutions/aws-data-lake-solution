@@ -90,10 +90,10 @@ describe('Group', function() {
         //-----------------------------------------------------------------------------------------
         // Check Access Control
         //-----------------------------------------------------------------------------------------
-        // it('Check Access Control', function(done) {
-        //     let _group = new Group();
-        //     accessControl(null, done, _group.listGroups);
-        // });
+        it('Check Access Control', function(done) {
+            let _group = new Group();
+            accessControl(null, done, _group.listGroups);
+        });
 
         it('should return the group list if the user is admin', function(done) {
             AWS.mock('CognitoIdentityServiceProvider', 'listGroups', function(params, callback) {

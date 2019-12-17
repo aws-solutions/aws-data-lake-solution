@@ -8,7 +8,7 @@ var chai = require("chai");
 chai.should();
 chai.use(require('chai-things'));
 
-let ContentPackage = require('./content-package.js');
+let ContentPackage = require('./content-package');
 
 describe('ContentPackage', function() {
     //=============================================================================================
@@ -121,6 +121,21 @@ describe('ContentPackage', function() {
             }
         });
 
+        AWS.mock('DynamoDB.DocumentClient', 'query', function(params, callback) {
+            if (params.TableName == 'data-lake-datasets') {
+                let response = {
+                    Items: [
+                        {
+                            content_type: 'include-path',
+                            s3_bucket: 'data-sets',
+                            s3_key: 'test-data-set'
+                        }
+                    ]
+                }
+                callback(null, response);
+            }
+        });
+
         AWS.mock('Glue', 'getCrawler', function(params, callback) {
             let result = {
                 Crawler: {
@@ -161,6 +176,10 @@ describe('ContentPackage', function() {
 
         AWS.mock('Glue', 'getTables', function(params, callback) {
             callback(null, listGlueTables);
+        });
+
+        AWS.mock('Glue', 'updateCrawler', function (params, callback) {
+            callback(null, {});
         });
 
         AWS.mock('Glue', 'startCrawler', function(params, callback) {
@@ -471,7 +490,7 @@ describe('ContentPackage', function() {
                 role: "role"
             };
             let _contentPackage = new ContentPackage();
-            _contentPackage.getCrawler('valid', _ticket,
+            _contentPackage.getCrawler("invalid", _ticket,
                 function(err, data) {
                     expect(err).to.have.property('code');
                     expect(err).to.have.property('message');
@@ -534,7 +553,7 @@ describe('ContentPackage', function() {
                 role: "role"
             };
             let _contentPackage = new ContentPackage();
-            _contentPackage.getTables('valid', _ticket,
+            _contentPackage.getTables('invalid', _ticket,
                 function(err, data) {
                     expect(err).to.have.property('code');
                     expect(err).to.have.property('message');
@@ -610,14 +629,16 @@ describe('ContentPackage', function() {
     //=============================================================================================
     describe('#startCrawler', function() {
 
+        // Failing
         //-----------------------------------------------------------------------------------------
         // Check Access Control
         //-----------------------------------------------------------------------------------------
         it('Check Access Control', function(done) {
-            let _contentPackage = new ContentPackage();
-            accessControl(null, done, _contentPackage.startCrawler);
+             let _contentPackage = new ContentPackage();
+             accessControl(null, done, _contentPackage.startCrawler);
         });
 
+        // Failing
         //-----------------------------------------------------------------------------------------
         // Check startCrawler specific cases
         //-----------------------------------------------------------------------------------------
@@ -629,8 +650,7 @@ describe('ContentPackage', function() {
                 role: "role"
             };
             let _contentPackage = new ContentPackage();
-            _contentPackage.startCrawler('valid', _ticket,
-                function(err, data) {
+            _contentPackage.startCrawler('valid', _ticket, function(err, data) {
                     expect(err).to.be.a('null');
                     expect(data).to.have.property('code', 200);
                     expect(data).to.have.property('message');

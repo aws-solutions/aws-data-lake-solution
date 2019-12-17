@@ -2,8 +2,7 @@
 
 let assert = require('assert');
 let AWS = require('aws-sdk-mock');
-
-let AccessLog = require('./access-log.js');
+let AccessLog = require('./access-log');
 
 describe('AccessLog', function() {
     describe('#logEvent', function() {
@@ -12,6 +11,7 @@ describe('AccessLog', function() {
             AWS.restore('DynamoDB.DocumentClient');
             AWS.restore('Lambda');
         });
+
 
         it('should log an event when logging is enabled', function(done) {
 

@@ -20,6 +20,11 @@ Resources:
 
     DataLakeLambdaExecRole:
         Type: "AWS::IAM::Role"
+        Metadata:
+            cfn_nag:
+                rules_to_suppress:
+                    - id: W28
+                      reason: "Explicit name to avoid cyclic dependency, ease of referencing and better readeability"
         Properties:
             RoleName: !Join ["-", ["data-lake-apig-role", Ref: "AWS::Region" ]]
             AssumeRolePolicyDocument:

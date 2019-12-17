@@ -5,32 +5,33 @@
     "author": {
         "name": "aws-solutions-builder"
     },
+    "license": "Apache-2.0",
     "version": "0.0.1",
     "private": "true",
     "dependencies": {
-        "moment": "*",
-        "shortid": "*",
-        "underscore": "*",
-        "jsonwebtoken": "*",
-        "jwk-to-pem": "*",
-        "request": "*",
-        "password-generator": "*",
-        "hat": "*",
-        "js-base64": "*",
+        "shortid": "^2.2.13",
+        "moment": "^2.22.2",
+        "underscore": "^1.9.1",
+        "jsonwebtoken": "^8.3.0",
+        "jwk-to-pem": "^2.0.0",
+        "request": "^2.88.0",
+        "password-generator": "^2.2.0",
+        "hat": "^0.0.3",
+        "js-base64": "^2.4.9",
         "access-validator": "file:../../../resources/access-validator/"
     },
     "devDependencies": {
-        "aws-sdk-mock": "*",
-        "chai": "*",
+        "aws-sdk-mock": "^4.5.0",
+        "chai": "^4.2.0",
         "chai-things": "^0.2.0",
         "grunt": "^0.4.5",
         "grunt-aws-lambda": "^0.13.0",
-        "grunt-contrib-clean": "*",
+        "grunt-contrib-clean": "^2.0.0",
         "grunt-pack": "0.1.*",
-        "mocha": "*",
-        "npm-run-all": "*",
+        "mocha": "^6.2.2",
+        "npm-run-all": "^4.1.5",
         "sinon": "^2.4.1",
-        "sinon-chai": "*"
+        "sinon-chai": "^3.3.0"
     },
     "scripts": {
         "test": "NODE_PATH=./node_modules mocha lib/*.spec.js",

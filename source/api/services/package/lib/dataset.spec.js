@@ -8,7 +8,7 @@ var chai = require("chai");
 chai.should();
 chai.use(require('chai-things'));
 
-let Dataset = require('./dataset.js');
+let Dataset = require('./dataset');
 
 describe('Dataset', function() {
     //=============================================================================================

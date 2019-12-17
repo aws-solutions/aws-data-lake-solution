@@ -1,4 +1,12 @@
-**/node_modules
 **/dist
 **/.zip
 **/.DS_Store
+**/node_modules
+**/bower_components
+**/package-lock.json
+/.idea/*
+/.scannerwork/*
+/docs/online-help/site
+/deployment/open-source/
+/source/console/app/lib/app-variables.js
+*.swp

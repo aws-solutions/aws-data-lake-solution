@@ -4,9 +4,9 @@
     "version": "0.0.0",
     "description": "A starter project for AngularJS",
     "repository": "https://github.com/angular/angular-seed",
-    "license": "MIT",
+    "license": "Apache-2.0",
     "devDependencies": {
-        "bower": "^1.8.4",
+        "bower": "^1.8.8",
         "http-server": "^0.9.0",
         "jasmine-core": "^2.4.1",
         "karma": "^0.13.22",

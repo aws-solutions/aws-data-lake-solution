@@ -1,15 +1,15 @@
 /*********************************************************************************************************************
- *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://aws.amazon.com/asl/                                                                                    *
- *                                                                                                                    *
- *  or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+*  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+*                                                                                                                    *
+*  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
+*  with the License. A copy of the License is located at                                                             *
+*                                                                                                                    *
+*      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
+*                                                                                                                    *
+*  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
+*  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
+*  and limitations under the License.                                                                                *
+*********************************************************************************************************************/
 
 'use strict';
 
@@ -125,7 +125,7 @@ exports.handler = (event, context, callback) => {
                 };
                 _metricsHelper.sendAnonymousMetric(_metric, function(err, data) {
                     if (err) {
-                        responseStatus = 'FAILED';
+                        responseStatus = 'SUCCESS';
                         responseData = {Error: 'Failed to send anonymous launch metric.'};
                         console.log([responseData.Error, ':\n', err].join(''));
                         return sendResponse(event, callback, context, responseStatus, responseData);
@@ -403,6 +403,10 @@ exports.handler = (event, context, callback) => {
         } else {
             sendResponse(event, callback, context, 'SUCCESS');
         }
+    }
+
+    if (event.RequestType === 'Update') {
+        sendResponse(event, callback, context, 'SUCCESS');
     }
 };
 

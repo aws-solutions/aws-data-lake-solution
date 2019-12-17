@@ -1,15 +1,15 @@
 /*********************************************************************************************************************
- *  Copyright 2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
- *                                                                                                                    *
- *  Licensed under the Amazon Software License (the "License"). You may not use this file except in compliance        *
- *  with the License. A copy of the License is located at                                                             *
- *                                                                                                                    *
- *      http://aws.amazon.com/asl/                                                                                    *
- *                                                                                                                    *
- *  or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES *
- *  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
- *  and limitations under the License.                                                                                *
- *********************************************************************************************************************/
+*  Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.                                           *
+*                                                                                                                    *
+*  Licensed under the Apache License, Version 2.0 (the "License"). You may not use this file except in compliance    *
+*  with the License. A copy of the License is located at                                                             *
+*                                                                                                                    *
+*      http://www.apache.org/licenses/LICENSE-2.0                                                                    *
+*                                                                                                                    *
+*  or in the 'license' file accompanying this file. This file is distributed on an 'AS IS' BASIS, WITHOUT WARRANTIES *
+*  OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific language governing permissions    *
+*  and limitations under the License.                                                                                *
+*********************************************************************************************************************/
 
 /**
  * @author Solution Builders
@@ -51,6 +51,7 @@ let s3Helper = (function() {
         //---------------------------------------------------------------------
         createBucket(defaultBucket, function(err, data) {
             if (err) {
+                console.log("Creating default bucket failed "+err, err.stack);
                 return cb(err, null);
             }
 
@@ -75,6 +76,7 @@ let s3Helper = (function() {
                 //-------------------------------------------------------------
                 createBucket(websiteBucket, function(err, data) {
                     if (err) {
+                        console.log("Creating website bucket failed "+err, err.stack)
                         return cb(err, null);
                     }
 
@@ -87,7 +89,7 @@ let s3Helper = (function() {
                     };
                     s3.putBucketWebsite(paramsBucketWebsite, function(err, data) {
                         if (err) {
-                            console.log(err, err.stack);
+                            console.log("Putting data in websie bucket failed "+err, err.stack);
                             return cb({code: 502, message: `Failed to configure ${websiteBucket} bucket for static website.`}, null);
                         }
 
@@ -180,6 +182,9 @@ let s3Helper = (function() {
         if (process.env.AWS_REGION !== "us-east-1") {
             paramsCreate.CreateBucketConfiguration = {LocationConstraint: process.env.AWS_REGION};
         }
+
+        console.log("Creating bucket "+ bucketName);
+
         s3.createBucket(paramsCreate, function(err, data) {
             if (err && err.code != 'BucketAlreadyOwnedByYou' && err.code != 'BucketAlreadyExists') {
                 console.log(err, err.stack);

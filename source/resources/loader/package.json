@@ -5,12 +5,13 @@
     "author": {
         "name": "aws-solutions-builder"
     },
+    "license": "Apache-2.0",
     "version": "0.0.1",
     "private": "true",
     "dependencies": {
-        "js-base64": "*",
-        "moment": "*",
-        "async": "*"
+        "js-base64": "^2.4.9",
+        "moment": "^2.22.2",
+        "async": "^0.0.1"
     },
     "bundledDependencies": [
         "moment",
