@@ -27,7 +27,7 @@ if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
 fi 
  
 # Get reference for all important folders 
-template_dir="$PWD" 
+template_dir="$PWD/dist"
 template_dist_dir="$template_dir/global-s3-assets" 
 build_dist_dir="$template_dir/regional-s3-assets" 
 source_dir="$template_dir/../source" 

@@ -53,16 +53,16 @@ The data lake solution is developed with Node.js for the microservices that run 
 #### 02. Build the data lake solution
 Clone the aws-data-lake-solution GitHub repository:
 
-```
-git clone https://github.com/awslabs/aws-data-lake-solution.git
+```bash
+$> git clone https://github.com/awslabs/aws-data-lake-solution.git
 ```
 
 #### 03. Declare enviroment variables:
 
-```
-export AWS_REGION=<aws-region-code>
-export VERSION_CODE=<version-code>
-export DEPLOY_BUCKET=<source-bucket-base-name>
+```bash
+$> export AWS_REGION=<aws-region-code>
+$> export VERSION_CODE=<version-code>
+$> export DEPLOY_BUCKET=<source-bucket-base-name>
 ```
 - **aws-region-code**: AWS region code. Ex: ```us-east-1```, ```us-west-2``` ...
 - **version-code**: version of the package
@@ -70,20 +70,27 @@ export DEPLOY_BUCKET=<source-bucket-base-name>
 
 #### 04. Run the data lake solution unit tests:
 ```
-cd ./aws-data-lake-solution/deployment
-chmod +x run-unit-tests.sh
-./run-unit-tests.sh
+$> cd ./aws-data-lake-solution/deployment
+$> chmod +x run-unit-tests.sh
+$> ./run-unit-tests.sh
 ```
 
 #### 05. Build the data lake solution for deployment:
-```
-chmod +x build-s3-dist.sh
-./build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
+```bash
+$> chmod +x build-s3-dist.sh
+$> ./build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
 ```
 
 #### 06. Upload deployment assets to your Amazon S3 bucket:
+```bash
+$> aws s3 mb s3://$DEPLOY_BUCKET --region $AWS_REGION
+$> aws s3 cp ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE --recursive --acl bucket-owner-full-control
 ```
-aws s3 cp ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE --recursive --acl bucket-owner-full-control
+
+If you need to update the stack already uploaded
+
+```bash
+$> aws s3 sync ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE
 ```
 
 #### 07. Deploy the data lake solution:
