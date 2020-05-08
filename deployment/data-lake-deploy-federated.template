@@ -1,17 +1,12 @@
+# Base Template to deploy the rest of stacks using federated login with an AFDS Server
+# https://github.com/awslabs/aws-data-lake-solution.git
+---
 AWSTemplateFormatVersion: "2010-09-09"
-
 Description: "(SO0017) - The AWS CloudFormation template for deployment of the AWS Data Lake AD Federated resources. Version %%VERSION%%"
 
-Parameters:
-    CognitoDomain:
-        Type: String
-        Description: Prefixed domain names can only contain lower-case letters, numbers, and hyphens.
-        AllowedPattern : "[a-z0-9-]+"
-
-    AdFsHostname:
-        Type: String
-        Description: Insert the hostname of your AD FS endpoint.
-        AllowedPattern: "^[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
+#
+# Metadata for adding UI to the Cloudformation Template when it's show at AWS Management Web Console
+# ######################################################################################################################
 
 Metadata:
     AWS::CloudFormation::Interface:
@@ -28,6 +23,21 @@ Metadata:
             CognitoDomain:
                 default: "Amazon Cognito Domain"
 
+#
+# Input parameters
+# ######################################################################################################################
+
+Parameters:
+    CognitoDomain:
+        Type: String
+        Description: Prefixed domain names can only contain lower-case letters, numbers, and hyphens.
+        AllowedPattern : "[a-z0-9-]+"
+
+    AdFsHostname:
+        Type: String
+        Description: Insert the hostname of your AD FS endpoint.
+        AllowedPattern: "^[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
+
 Mappings:
     SourceCode:
         General:
@@ -38,6 +48,10 @@ Mappings:
     Solution:
         Data:
             SendAnonymousUsageData: "Yes"
+
+#
+# Main Section with the others templates and the resources needed
+# ######################################################################################################################
 
 Resources:
     DataLakeStorageStack:
@@ -571,6 +585,10 @@ Resources:
             userPoolClientId: !GetAtt DataLakeUserPool.UserPoolClientId
             consoleUrl: !Join ["", ["https://", !GetAtt ConsoleCFDistribution.DomainName]]
             customAction: "federateAccess"
+
+#
+# Outputs section
+# ######################################################################################################################
 
 Outputs:
     ConsoleUrl:

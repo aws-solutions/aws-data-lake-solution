@@ -1,6 +1,12 @@
+# Fist template to deploy the DL Storage
+# https://github.com/awslabs/aws-data-lake-solution.git
+---
 AWSTemplateFormatVersion: "2010-09-09"
-
 Description: "The AWS CloudFormation template for deployment of the AWS Data Lake storage resources"
+
+#
+# Mappings Section
+# ######################################################################################################################
 
 Mappings:
     RegionMap:
@@ -49,6 +55,10 @@ Mappings:
         eu-west-3:
             "InstanceType": "r4.large.elasticsearch"
             "DedicatedMasterType": "t2.small.elasticsearch"
+
+#
+# Main Section with the others templates and the resources needed
+# ######################################################################################################################
 
 Resources:
 
@@ -298,6 +308,10 @@ Resources:
                             !Join ["", ["arn:aws:es:", Ref: "AWS::Region", ":", Ref: "AWS::AccountId", ":domain/data-lake/*"]]
             AdvancedOptions:
                 rest.action.multi.allow_explicit_index: true
+
+#
+# Outputs section
+# ######################################################################################################################
 
 Outputs:
     EsCluster:

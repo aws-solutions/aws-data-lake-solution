@@ -1,6 +1,12 @@
+# Second template to deploy the microservices and dependencies
+# https://github.com/awslabs/aws-data-lake-solution.git
+---
 AWSTemplateFormatVersion: "2010-09-09"
-
 Description: "The AWS CloudFormation template for deployment of the AWS Data Lake resources"
+
+#
+# Input parameters
+# ######################################################################################################################
 
 Parameters:
     UserPoolId:
@@ -15,6 +21,10 @@ Parameters:
         Type: String
     FederatedLogin:
         Type: String
+
+#
+# Main Section with the others templates and the resources needed
+# ######################################################################################################################
 
 Resources:
     DataLakeKmsKey:
@@ -96,7 +106,7 @@ Resources:
         Properties:
             Code:
                 S3Bucket: !Ref SourceS3Bucket
-                S3Key: !Join [ "/", [!Ref SourceKeyPrefix, "data-lake-logging-service.zip"]]
+                S3Key: !Join [ "/", [!Ref SourceKeyPrefix, "regional-s3-assets", "data-lake-logging-service.zip"]]
             Description: "A data lake microservice function for logging functionality"
             FunctionName: "data-lake-logging-service"
             Handler: "index.handler"
@@ -1005,6 +1015,10 @@ Resources:
                     - "Arn"
             Runtime: "nodejs12.x"
             Timeout: "60"
+
+#
+# Outputs section
+# ######################################################################################################################
 
 Outputs:
     AuthorizerArn:

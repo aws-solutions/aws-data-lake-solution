@@ -1,6 +1,12 @@
+# Third and last template to deploy the API
+# https://github.com/awslabs/aws-data-lake-solution.git
+---
 AWSTemplateFormatVersion: "2010-09-09"
-
 Description: "The AWS CloudFormation template for deployment of the AWS Data Lake RESTful API"
+
+#
+# Input parameters
+# ######################################################################################################################
 
 Parameters:
     AuthorizerArn:
@@ -15,6 +21,10 @@ Parameters:
         Type: String
     PackageArn:
         Type: String
+
+#
+# Main Section with the others templates and the resources needed
+# ######################################################################################################################
 
 Resources:
 
@@ -1381,6 +1391,10 @@ Resources:
                   Empty:
                     type: "object"
                     title: "Empty Schema"
+
+#
+# Outputs section
+# ######################################################################################################################
 
 Outputs:
     ApiId:
