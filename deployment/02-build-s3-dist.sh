@@ -15,7 +15,13 @@
 #  - trademarked-solution-name: name of the solution for consistency 
 # 
 #  - version-code: version of the package 
- 
+
+node --version >/dev/null 2>&1 || { echo >&2 "I require nodejs but it's not installed. ¯\_(ツ)_/¯ Aborting."; exit 1; }
+npm --version >/dev/null 2>&1 || { echo >&2 "I require npm utility but it's not installed. ¯\_(ツ)_/¯ Aborting."; exit 1; }
+zip --version >/dev/null 2>&1 || { echo >&2 "I require zip utility but it's not installed. ¯\_(ツ)_/¯ Aborting."; exit 1; }
+
+clear
+
 # Check to see if input has been provided:
 [ "$DEBUG" == 'true' ] && set -x
 set -e
