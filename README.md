@@ -71,14 +71,15 @@ $> export DEPLOY_BUCKET=<source-bucket-base-name>
 #### 04. Run the data lake solution unit tests:
 ```
 $> cd ./aws-data-lake-solution/deployment
-$> chmod +x run-unit-tests.sh
-$> ./run-unit-tests.sh
+
+$> chmod +x 01-run-unit-tests.sh
+$> ./0-1run-unit-tests.sh
 ```
 
 #### 05. Build the data lake solution for deployment:
 ```bash
-$> chmod +x build-s3-dist.sh
-$> ./build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
+$> chmod +x 02-build-s3-dist.sh
+$> ./02-build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
 ```
 
 #### 06. Upload deployment assets to your Amazon S3 bucket:
@@ -98,6 +99,11 @@ $> aws s3 sync ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE
 * Using AWS CloudFormation, launch the data lake solution stack using the copied Amazon S3 link for the data-lake-deploy.template or data-lake-deploy-federated.template.
 
 > Currently, the data lake solution can be deployed in the following regions: [ us-east-1, us-east-2, us-west-2, eu-west-1, eu-west-2, eu-central-1, ap-northeast-1, ap-northeast-2, ap-southeast-2, ap-south-1 ]
+
+```bash
+$> chmod +x 03-deploy-stack.sh
+$> ./03-deploy-stack.sh
+```
 
 ***
 
