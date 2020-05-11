@@ -88,7 +88,7 @@ Resources:
             Parameters:
                 UserPoolId: !GetAtt DataLakeUserPool.UserPoolId
                 UserPoolClientId: !GetAtt DataLakeUserPool.UserPoolClientId
-                SourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+                SourceS3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
                 SourceKeyPrefix: !FindInMap ["SourceCode", "General", "KeyPrefix"]
                 FederatedLogin: false
 
@@ -194,7 +194,7 @@ Resources:
                     - "Arn"
             Region:
                 - Ref: "AWS::Region"
-            sourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+            sourceS3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
             sourceS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets", "site"]]
             sourceSiteManifestS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets", "data-lake-site-manifest.json"]]
             destS3Bucket: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
@@ -392,7 +392,7 @@ Resources:
         Type: "AWS::Lambda::Function"
         Properties:
             Code:
-                S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+                S3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
                 S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets",  "data-lake-helper.zip"]]
             Description: "A data lake helper function for solution deployment"
             FunctionName: "data-lake-helper"
@@ -484,7 +484,6 @@ Resources:
                 BlockPublicPolicy: true
                 IgnorePublicAcls: true
                 RestrictPublicBuckets: true
-                
 
     S3LoggingBucket:
         DeletionPolicy: Retain
@@ -555,7 +554,6 @@ Resources:
             ViewerCertificate:
                 CloudFrontDefaultCertificate: true
             Enabled: true
-
 
     AppVariables:
         DependsOn:

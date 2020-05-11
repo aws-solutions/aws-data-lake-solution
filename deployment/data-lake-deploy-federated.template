@@ -87,7 +87,7 @@ Resources:
             - "DataLakeServicesStack"
         Type: "AWS::CloudFormation::Stack"
         Properties:
-            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-api.template"]]
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "global-s3-assets", "data-lake-api.template"]]
             Parameters:
                 AuthorizerArn: !GetAtt DataLakeServicesStack.Outputs.AuthorizerArn
                 AdminArn: !GetAtt DataLakeServicesStack.Outputs.AdminArn
@@ -184,9 +184,9 @@ Resources:
                     - "Arn"
             Region:
                 - Ref: "AWS::Region"
-            sourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
-            sourceS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "site"]]
-            sourceSiteManifestS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-site-manifest.json"]]
+            sourceS3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
+            sourceS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets", "site"]]
+            sourceSiteManifestS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets", "data-lake-site-manifest.json"]]
             destS3Bucket: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
             customAction: "configureWebsite"
 
@@ -382,8 +382,8 @@ Resources:
         Type: "AWS::Lambda::Function"
         Properties:
             Code:
-                S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
-                S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "data-lake-helper.zip"]]
+                S3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
+                S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets",  "data-lake-helper.zip"]]
             Description: "A data lake helper function for solution deployment"
             FunctionName: "data-lake-helper"
             Handler: "index.handler"
@@ -614,4 +614,4 @@ Outputs:
         Value: !Join ["", ["https://", !Ref CognitoDomain, ".auth.", Ref: "AWS::Region", ".amazoncognito.com/saml2/logout"]]
     IdentityProvidersUrl:
         Description: "Link to Cognito page that contains the AD signing certificate."
-        Value: !GetAtt FederateLogin.IdentityProvidersUrl
+        Value: !GetAtt 'FederateLogin.IdentityProvidersUrl'
