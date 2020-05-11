@@ -84,13 +84,10 @@ $> ./02-build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
 
 #### 06. Upload deployment assets to your Amazon S3 bucket:
 ```bash
-$> aws s3 mb s3://$DEPLOY_BUCKET --region $AWS_REGION
-$> aws s3 cp ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE --recursive --acl bucket-owner-full-control
-```
+$> chmod +x 03-upload-resources.sh
+$> ./03-upload-resources.sh
 
-If you need to update the stack already uploaded
-
-```bash
+# If you need to update the stack already uploaded
 $> aws s3 sync ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE
 ```
 
@@ -101,11 +98,17 @@ $> aws s3 sync ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE
 > Currently, the data lake solution can be deployed in the following regions: [ us-east-1, us-east-2, us-west-2, eu-west-1, eu-west-2, eu-central-1, ap-northeast-1, ap-northeast-2, ap-southeast-2, ap-south-1 ]
 
 ```bash
-$> chmod +x 03-deploy-stack.sh
-$> ./03-deploy-stack.sh
+$> chmod +x 04-deploy-stack.sh
+$> ./04-deploy-stack.sh
 ```
-
 ***
+
+#### 08. Optionally (destroy the infrastrucutre)
+
+```bash
+$> chmod +x 99-delete-data-lake.sh
+$> ./99-delete-data-lake.sh
+```
 
 Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
