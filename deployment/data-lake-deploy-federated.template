@@ -42,9 +42,9 @@ Mappings:
     SourceCode:
         General:
             S3Bucket: "%%BUCKET_NAME%%"
-            KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"
+            KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"          # TODO: Fix issue on generating this
             S3TemplateBucket: "%%TEMPLATE_BUCKET_NAME%%"
-            SolutionName: "%%SOLUTION_NAME%%"
+            SolutionName: "%%SOLUTION_NAME%%"                   # TODO: Fix issue on generating this
     Solution:
         Data:
             SendAnonymousUsageData: "Yes"

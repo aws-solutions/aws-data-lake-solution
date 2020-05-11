@@ -6,26 +6,26 @@ clear
 
 export STACK_NAME=data-lake-base
 
-read -p 'AdministratorName? >' ADMIN_NAME
+read -p 'Stack Name? ' STACK_NAME
 
-read -p 'AdministratorName? >' ADMIN_NAME
-read -p 'AdministratorEmail? >' ADMIN_EMAIL
-read -p 'CognitoDomain? >' COGNITO_DOMAIN
+read -p 'AdministratorName? ' ADMIN_NAME
+read -p 'AdministratorEmail? ' ADMIN_EMAIL
+read -p 'CognitoDomain? ' COGNITO_DOMAIN
 
 # Deploy workspace
 aws cloudformation deploy \
-    --template-file s3://${DEPLOY_BUCKET}/data-lake/$VERSION_CODE/global-s3-assets/data-lake-deploy.template \
+    --template-file dist/global-s3-assets/data-lake-deploy.template \
     --stack-name ${STACK_NAME} \
     --region ${AWS_REGION} \
     --capabilities CAPABILITY_NAMED_IAM \
     --parameter-overrides \
-        AdministratorName=${ADMIN_NAME} \
-        AdministratorEmail=${ADMIN_EMAIL} \
-        CognitoDomain=${COGNITO_DOMAIN} \
+        AdministratorName="$ADMIN_NAME" \
+        AdministratorEmail=$ADMIN_EMAIL \
+        CognitoDomain=$COGNITO_DOMAIN \
     --tags \
-      Owner=${ADMIN_NAME} \
-      Email=${ADMIN_EMAIL} \
-      Version=${VERSION_CODE}
+      Owner=ADMIN_NAME \
+      Email=ADMIN_EMAIL \
+      Version=VERSION_CODE
 
 if [ $? -ne 0 ]; then
     echo "Problem running deploy. Please check errors"
