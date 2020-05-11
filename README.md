@@ -53,37 +53,44 @@ The data lake solution is developed with Node.js for the microservices that run 
 #### 02. Build the data lake solution
 Clone the aws-data-lake-solution GitHub repository:
 
-```
-git clone https://github.com/awslabs/aws-data-lake-solution.git
+```bash
+$> git clone https://github.com/awslabs/aws-data-lake-solution.git
 ```
 
-#### 03. Declare enviroment variables:
+#### 03. Define environment variables at :
 
-```
-export AWS_REGION=<aws-region-code>
-export VERSION_CODE=<version-code>
-export DEPLOY_BUCKET=<source-bucket-base-name>
-```
 - **aws-region-code**: AWS region code. Ex: ```us-east-1```, ```us-west-2``` ...
 - **version-code**: version of the package
-- **source-bucket-base-name**: Name for the S3 bucket location where the template will source the Lambda code from. The template will append ```-[aws-region-code]``` to this bucket name. For example: ```./build-s3-dist.sh solutions v2.0.0```, the template will then expect the source code to be located in the ```solutions-[aws-region-code]``` bucket.
+- **source-bucket-base-name**: Name for the S3 bucket location where the template will source the Lambda code from.
+
+```bash
+$> cd ./aws-data-lake-solution/deployment
+$> vi 00-set-environment.sh
+
+```
 
 #### 04. Run the data lake solution unit tests:
-```
-cd ./aws-data-lake-solution/deployment
-chmod +x run-unit-tests.sh
-./run-unit-tests.sh
+
+```bash
+$> chmod +x 01-run-unit-tests.sh
+$> ./0-1run-unit-tests.sh
 ```
 
 #### 05. Build the data lake solution for deployment:
-```
-chmod +x build-s3-dist.sh
-./build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
+
+```bash
+$> chmod +x 02-build-s3-dist.sh
+$> ./02-build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
 ```
 
 #### 06. Upload deployment assets to your Amazon S3 bucket:
-```
-aws s3 cp ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE --recursive --acl bucket-owner-full-control
+
+```bash
+$> chmod +x 03-upload-resources.sh
+$> ./03-upload-resources.sh
+
+# If you need to update the stack already uploaded
+$> aws s3 sync ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE
 ```
 
 #### 07. Deploy the data lake solution:
@@ -92,7 +99,18 @@ aws s3 cp ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE --recursive --acl b
 
 > Currently, the data lake solution can be deployed in the following regions: [ us-east-1, us-east-2, us-west-2, eu-west-1, eu-west-2, eu-central-1, ap-northeast-1, ap-northeast-2, ap-southeast-2, ap-south-1 ]
 
+```bash
+$> chmod +x 04-deploy-stack.sh
+$> ./04-deploy-stack.sh
+```
 ***
+
+#### 08. Optionally (destroy the infrastrucutre)
+
+```bash
+$> chmod +x 99-delete-data-lake.sh
+$> ./99-delete-data-lake.sh
+```
 
 Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 

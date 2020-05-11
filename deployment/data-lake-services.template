@@ -1,6 +1,12 @@
+# Second template to deploy the microservices and dependencies
+# https://github.com/awslabs/aws-data-lake-solution.git
+---
 AWSTemplateFormatVersion: "2010-09-09"
-
 Description: "The AWS CloudFormation template for deployment of the AWS Data Lake resources"
+
+#
+# Input parameters
+# ######################################################################################################################
 
 Parameters:
     UserPoolId:
@@ -15,6 +21,10 @@ Parameters:
         Type: String
     FederatedLogin:
         Type: String
+
+#
+# Main Section with the others templates and the resources needed
+# ######################################################################################################################
 
 Resources:
     DataLakeKmsKey:
@@ -96,7 +106,7 @@ Resources:
         Properties:
             Code:
                 S3Bucket: !Ref SourceS3Bucket
-                S3Key: !Join [ "/", [!Ref SourceKeyPrefix, "data-lake-logging-service.zip"]]
+                S3Key: !Join [ "/", [!Ref SourceKeyPrefix, "regional-s3-assets", "data-lake-logging-service.zip"]]
             Description: "A data lake microservice function for logging functionality"
             FunctionName: "data-lake-logging-service"
             Handler: "index.handler"
@@ -191,7 +201,7 @@ Resources:
             Code:
                 S3Bucket: !Ref SourceS3Bucket
                 S3Key:
-                    !Join ["/", [!Ref SourceKeyPrefix, "data-lake-admin-service.zip"]]
+                    !Join ["/", [!Ref SourceKeyPrefix, "regional-s3-assets", "data-lake-admin-service.zip"]]
             Description: "A data lake microservice function for admin functionality"
             FunctionName: "data-lake-admin-service"
             Handler: "index.handler"
@@ -296,7 +306,7 @@ Resources:
         Properties:
             Code:
                 S3Bucket: !Ref SourceS3Bucket
-                S3Key: !Join ["/", [!Ref SourceKeyPrefix, "data-lake-search-service.zip" ]]
+                S3Key: !Join ["/", [!Ref SourceKeyPrefix, "regional-s3-assets", "data-lake-search-service.zip" ]]
             Description: "A data lake microservice function for interacting with the elasticsearch cluster"
             FunctionName: "data-lake-search-service"
             Handler: "index.handler"
@@ -431,7 +441,7 @@ Resources:
         Properties:
             Code:
                 S3Bucket: !Ref SourceS3Bucket
-                S3Key:  !Join ["/", [!Ref SourceKeyPrefix, "data-lake-manifest-service.zip" ]]
+                S3Key:  !Join ["/", [!Ref SourceKeyPrefix, "regional-s3-assets", "data-lake-manifest-service.zip" ]]
             Description: "A data lake microservice function for manifest functionality"
             FunctionName: "data-lake-manifest-service"
             Handler: "index.handler"
@@ -517,7 +527,7 @@ Resources:
         Properties:
             Code:
                 S3Bucket: !Ref SourceS3Bucket
-                S3Key: !Join [ "/", [!Ref SourceKeyPrefix, "data-lake-cart-service.zip" ]]
+                S3Key: !Join [ "/", [!Ref SourceKeyPrefix, "regional-s3-assets", "data-lake-cart-service.zip" ]]
             Description: "A data lake microservice function for cart functionality"
             FunctionName: "data-lake-cart-service"
             Handler: "index.handler"
@@ -811,7 +821,7 @@ Resources:
         Properties:
             Code:
                 S3Bucket: !Ref SourceS3Bucket
-                S3Key: !Join [ "/",  [!Ref SourceKeyPrefix, "data-lake-package-service.zip" ]]
+                S3Key: !Join [ "/",  [!Ref SourceKeyPrefix, "regional-s3-assets", "data-lake-package-service.zip" ]]
             Description: "A data lake microservice function for package functionality"
             FunctionName: "data-lake-package-service"
             Handler: "index.handler"
@@ -910,7 +920,7 @@ Resources:
         Properties:
             Code:
                 S3Bucket: !Ref SourceS3Bucket
-                S3Key: !Join [ "/", [ !Ref SourceKeyPrefix, "data-lake-profile-service.zip" ]]
+                S3Key: !Join [ "/", [ !Ref SourceKeyPrefix, "regional-s3-assets", "data-lake-profile-service.zip" ]]
             Description: "A data lake microservice function for profile functionality"
             FunctionName: "data-lake-profile-service"
             Handler: "index.handler"
@@ -994,7 +1004,7 @@ Resources:
         Properties:
             Code:
                 S3Bucket: !Ref SourceS3Bucket
-                S3Key: !Join [ "/", [!Ref SourceKeyPrefix, "data-lake-authorizer.zip" ]]
+                S3Key: !Join [ "/", [!Ref SourceKeyPrefix, "regional-s3-assets", "data-lake-authorizer.zip" ]]
             Description: "A data lake microservice function for custom authorizer functionality"
             FunctionName: "data-lake-authorizer"
             Handler: "index.handler"
@@ -1006,22 +1016,26 @@ Resources:
             Runtime: "nodejs12.x"
             Timeout: "60"
 
+#
+# Outputs section
+# ######################################################################################################################
+
 Outputs:
     AuthorizerArn:
         Description: "ARN of data lake API Gateway custom authorizer function"
-        Value: !GetAtt DataLakeAuthorizerService.Arn
+        Value: !GetAtt 'DataLakeAuthorizerService.Arn'
     AdminArn:
         Description: "ARN of data lake admin services function"
-        Value: !GetAtt DataLakeAdminService.Arn
+        Value: !GetAtt 'DataLakeAdminService.Arn'
     CartArn:
         Description: "ARN of data lake cart services function"
-        Value: !GetAtt DataLakeCartService.Arn
+        Value: !GetAtt 'DataLakeCartService.Arn'
     ProfileArn:
         Description: "ARN of data lake profile services function"
-        Value: !GetAtt DataLakeProfileService.Arn
+        Value: !GetAtt 'DataLakeProfileService.Arn'
     SearchArn:
         Description: "ARN of data lake search services function"
-        Value: !GetAtt DataLakeSearchService.Arn
+        Value: !GetAtt 'DataLakeSearchService.Arn'
     PackageArn:
         Description: "ARN of data lake package services function"
-        Value: !GetAtt DataLakePackagesService.Arn
+        Value: !GetAtt 'DataLakePackagesService.Arn'

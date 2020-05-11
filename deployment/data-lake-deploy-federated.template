@@ -1,17 +1,12 @@
+# Base Template to deploy the rest of stacks using federated login with an AFDS Server
+# https://github.com/awslabs/aws-data-lake-solution.git
+---
 AWSTemplateFormatVersion: "2010-09-09"
-
 Description: "(SO0017) - The AWS CloudFormation template for deployment of the AWS Data Lake AD Federated resources. Version %%VERSION%%"
 
-Parameters:
-    CognitoDomain:
-        Type: String
-        Description: Prefixed domain names can only contain lower-case letters, numbers, and hyphens.
-        AllowedPattern : "[a-z0-9-]+"
-
-    AdFsHostname:
-        Type: String
-        Description: Insert the hostname of your AD FS endpoint.
-        AllowedPattern: "^[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
+#
+# Metadata for adding UI to the Cloudformation Template when it's show at AWS Management Web Console
+# ######################################################################################################################
 
 Metadata:
     AWS::CloudFormation::Interface:
@@ -28,16 +23,35 @@ Metadata:
             CognitoDomain:
                 default: "Amazon Cognito Domain"
 
+#
+# Input parameters
+# ######################################################################################################################
+
+Parameters:
+    CognitoDomain:
+        Type: String
+        Description: Prefixed domain names can only contain lower-case letters, numbers, and hyphens.
+        AllowedPattern : "[a-z0-9-]+"
+
+    AdFsHostname:
+        Type: String
+        Description: Insert the hostname of your AD FS endpoint.
+        AllowedPattern: "^[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
+
 Mappings:
     SourceCode:
         General:
             S3Bucket: "%%BUCKET_NAME%%"
-            KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"
+            KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"          # TODO: Fix issue on generating this
             S3TemplateBucket: "%%TEMPLATE_BUCKET_NAME%%"
-            SolutionName: "%%SOLUTION_NAME%%"
+            SolutionName: "%%SOLUTION_NAME%%"                   # TODO: Fix issue on generating this
     Solution:
         Data:
             SendAnonymousUsageData: "Yes"
+
+#
+# Main Section with the others templates and the resources needed
+# ######################################################################################################################
 
 Resources:
     DataLakeStorageStack:
@@ -73,7 +87,7 @@ Resources:
             - "DataLakeServicesStack"
         Type: "AWS::CloudFormation::Stack"
         Properties:
-            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-api.template"]]
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "global-s3-assets", "data-lake-api.template"]]
             Parameters:
                 AuthorizerArn: !GetAtt DataLakeServicesStack.Outputs.AuthorizerArn
                 AdminArn: !GetAtt DataLakeServicesStack.Outputs.AdminArn
@@ -170,9 +184,9 @@ Resources:
                     - "Arn"
             Region:
                 - Ref: "AWS::Region"
-            sourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
-            sourceS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "site"]]
-            sourceSiteManifestS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-site-manifest.json"]]
+            sourceS3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
+            sourceS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets", "site"]]
+            sourceSiteManifestS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets", "data-lake-site-manifest.json"]]
             destS3Bucket: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
             customAction: "configureWebsite"
 
@@ -368,8 +382,8 @@ Resources:
         Type: "AWS::Lambda::Function"
         Properties:
             Code:
-                S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
-                S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "data-lake-helper.zip"]]
+                S3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
+                S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets",  "data-lake-helper.zip"]]
             Description: "A data lake helper function for solution deployment"
             FunctionName: "data-lake-helper"
             Handler: "index.handler"
@@ -572,6 +586,10 @@ Resources:
             consoleUrl: !Join ["", ["https://", !GetAtt ConsoleCFDistribution.DomainName]]
             customAction: "federateAccess"
 
+#
+# Outputs section
+# ######################################################################################################################
+
 Outputs:
     ConsoleUrl:
         Description: "URL for the data lake console."
@@ -596,4 +614,4 @@ Outputs:
         Value: !Join ["", ["https://", !Ref CognitoDomain, ".auth.", Ref: "AWS::Region", ".amazoncognito.com/saml2/logout"]]
     IdentityProvidersUrl:
         Description: "Link to Cognito page that contains the AD signing certificate."
-        Value: !GetAtt FederateLogin.IdentityProvidersUrl
+        Value: !GetAtt 'FederateLogin.IdentityProvidersUrl'

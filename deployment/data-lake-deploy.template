@@ -1,20 +1,12 @@
+# Base Template to deploy the rest of stacks using Cognito
+# https://github.com/awslabs/aws-data-lake-solution.git
+---
 AWSTemplateFormatVersion: "2010-09-09"
+Description: "(SO0017) - The AWS CloudFormation template for deployment of the AWS Data Lake resources. Version 2.2.0"
 
-Description: "(SO0017) - The AWS CloudFormation template for deployment of the AWS Data Lake resources. Version %%VERSION%%"
-
-Parameters:
-    AdministratorName:
-        Type: String
-        Description: Name of the Data Lake administrator.
-        AllowedPattern : ".+"
-    AdministratorEmail:
-        Type: String
-        Description: Email address for Data Lake administrator.
-        AllowedPattern: "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
-    CognitoDomain:
-        Type: String
-        Description: Prefixed domain names can only contain lower-case letters, numbers, and hyphens.
-        AllowedPattern : "[a-z0-9-]+"
+#
+# Metadata for adding UI to the Cloudformation Template when it's show at AWS Management Web Console
+# ######################################################################################################################
 
 Metadata:
     AWS::CloudFormation::Interface:
@@ -34,23 +26,49 @@ Metadata:
             CognitoDomain:
                 default: "Amazon Cognito Domain"
 
+#
+# Input parameters
+# ######################################################################################################################
+
+Parameters:
+    AdministratorName:
+        Type: String
+        Description: Name of the Data Lake administrator.
+        AllowedPattern : ".+"
+    AdministratorEmail:
+        Type: String
+        Description: Email address for Data Lake administrator.
+        AllowedPattern: "^[_A-Za-z0-9-\\+]+(\\.[_A-Za-z0-9-]+)*@[A-Za-z0-9-]+(\\.[A-Za-z0-9]+)*(\\.[A-Za-z]{2,})$"
+    CognitoDomain:
+        Type: String
+        Description: Prefixed domain names can only contain lower-case letters, numbers, and hyphens.
+        AllowedPattern : "[a-z0-9-]+"
+
+#
+# Mappings Section
+# ISSUE: Check use of solution name in path, because it's needed to fix
+# ######################################################################################################################
+
 Mappings:
     SourceCode:
         General:
             S3Bucket: "%%BUCKET_NAME%%"
-            KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"
+            KeyPrefix: "%%SOLUTION_NAME%%/%%VERSION%%"      # TODO: Fix issue on generating this
             S3TemplateBucket: "%%TEMPLATE_BUCKET_NAME%%"
-            SolutionName: "%%SOLUTION_NAME%%"
+            SolutionName: "%%SOLUTION_NAME%%"               # TODO: Fix issue on generating this
     Solution:
         Data:
             SendAnonymousUsageData: "Yes"
+
+#
+# Main Section with the others templates and the resources needed
+# ######################################################################################################################
 
 Resources:
     DataLakeStorageStack:
         Type: "AWS::CloudFormation::Stack"
         Properties:
-            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-storage.template"]]
-
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "global-s3-assets", "data-lake-storage.template"]]
     DataLakeUserPool:
         Type: "Custom::LoadLambda"
         Properties:
@@ -66,11 +84,11 @@ Resources:
         DependsOn: "DataLakeUserPool"
         Type: "AWS::CloudFormation::Stack"
         Properties:
-            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-services.template"]]
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "global-s3-assets", "data-lake-services.template"]]
             Parameters:
                 UserPoolId: !GetAtt DataLakeUserPool.UserPoolId
                 UserPoolClientId: !GetAtt DataLakeUserPool.UserPoolClientId
-                SourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
+                SourceS3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
                 SourceKeyPrefix: !FindInMap ["SourceCode", "General", "KeyPrefix"]
                 FederatedLogin: false
 
@@ -79,7 +97,7 @@ Resources:
             - "DataLakeServicesStack"
         Type: "AWS::CloudFormation::Stack"
         Properties:
-            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-api.template"]]
+            TemplateURL: !Join ["/", ["https://s3.amazonaws.com", !FindInMap ["SourceCode", "General", "S3TemplateBucket"], !FindInMap ["SourceCode", "General", "KeyPrefix"], "global-s3-assets", "data-lake-api.template"]]
             Parameters:
                 AuthorizerArn: !GetAtt DataLakeServicesStack.Outputs.AuthorizerArn
                 AdminArn: !GetAtt DataLakeServicesStack.Outputs.AdminArn
@@ -176,9 +194,9 @@ Resources:
                     - "Arn"
             Region:
                 - Ref: "AWS::Region"
-            sourceS3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
-            sourceS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "site"]]
-            sourceSiteManifestS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "data-lake-site-manifest.json"]]
+            sourceS3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
+            sourceS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets", "site"]]
+            sourceSiteManifestS3key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets", "data-lake-site-manifest.json"]]
             destS3Bucket: !Join ["", ["datalakeweb-", Ref: "AWS::Region", "-", Ref: "AWS::AccountId"]]
             customAction: "configureWebsite"
 
@@ -374,8 +392,8 @@ Resources:
         Type: "AWS::Lambda::Function"
         Properties:
             Code:
-                S3Bucket: !Join ["-", [!FindInMap ["SourceCode", "General", "S3Bucket"], Ref: "AWS::Region"]]
-                S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"],  "data-lake-helper.zip"]]
+                S3Bucket: !FindInMap ["SourceCode", "General", "S3TemplateBucket"]
+                S3Key: !Join ["/", [!FindInMap ["SourceCode", "General", "KeyPrefix"], "regional-s3-assets",  "data-lake-helper.zip"]]
             Description: "A data lake helper function for solution deployment"
             FunctionName: "data-lake-helper"
             Handler: "index.handler"
@@ -466,7 +484,6 @@ Resources:
                 BlockPublicPolicy: true
                 IgnorePublicAcls: true
                 RestrictPublicBuckets: true
-                
 
     S3LoggingBucket:
         DeletionPolicy: Retain
@@ -538,7 +555,6 @@ Resources:
                 CloudFrontDefaultCertificate: true
             Enabled: true
 
-
     AppVariables:
         DependsOn:
             - "DataLakeUserPool"
@@ -579,16 +595,21 @@ Resources:
             adminEmail: !Ref AdministratorEmail
             appUrl: !Join ["", ["https://", !GetAtt ConsoleCFDistribution.DomainName]]
             customAction: "createAdminUser"
+
+#
+# Outputs section
+# ######################################################################################################################
+
 Outputs:
     ConsoleUrl:
         Description: "URL for the data lake console"
         Value: !Join ["", ["https://", !GetAtt ConsoleCFDistribution.DomainName]]
     UserPoolId:
         Description: "Id of data lake Amazon Cognito User Pool"
-        Value: !GetAtt DataLakeUserPool.UserPoolId
+        Value: !GetAtt 'DataLakeUserPool.UserPoolId'
     UserPoolClientId:
         Description: "Id of data lake UI client app"
-        Value: !GetAtt DataLakeUserPool.UserPoolClientId
+        Value: !GetAtt 'DataLakeUserPool.UserPoolClientId'
     UUID:
         Description: "UUID for data lake deployment"
-        Value: !GetAtt DataLakeUuid.UUID
+        Value: !GetAtt 'DataLakeUuid.UUID'

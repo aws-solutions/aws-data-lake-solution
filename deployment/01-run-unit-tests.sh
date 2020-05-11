@@ -7,6 +7,11 @@
 # ./run-unit-tests.sh
 #
 
+node --version >/dev/null 2>&1 || { echo >&2 "I require nodejs but it's not installed. ¯\_(ツ)_/¯ Aborting."; exit 1; }
+npm --version >/dev/null 2>&1 || { echo >&2 "I require npm utility but it's not installed. ¯\_(ツ)_/¯ Aborting."; exit 1; }
+
+source 00-set-environment.sh
+
 # Get reference for all important folders
 template_dir="$PWD"
 source_dir="$template_dir/../source"

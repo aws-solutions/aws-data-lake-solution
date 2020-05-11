@@ -6,7 +6,7 @@
 # cd deployment 
 # ./build-s3-dist.sh source-bucket-base-name trademarked-solution-name version-code 
 # 
-# Paramenters: 
+# Parameters:
 #  - source-bucket-base-name: Name for the S3 bucket location where the template will source the Lambda 
 #    code from. The template will append '-[region_name]' to this bucket name. 
 #    For example: ./build-s3-dist.sh solutions my-solution v1.0.0 cf-template-bucket
@@ -15,7 +15,13 @@
 #  - trademarked-solution-name: name of the solution for consistency 
 # 
 #  - version-code: version of the package 
- 
+
+node --version >/dev/null 2>&1 || { echo >&2 "I require nodejs but it's not installed. ¯\_(ツ)_/¯ Aborting."; exit 1; }
+npm --version >/dev/null 2>&1 || { echo >&2 "I require npm utility but it's not installed. ¯\_(ツ)_/¯ Aborting."; exit 1; }
+zip --version >/dev/null 2>&1 || { echo >&2 "I require zip utility but it's not installed. ¯\_(ツ)_/¯ Aborting."; exit 1; }
+
+source 00-set-environment.sh
+
 # Check to see if input has been provided:
 [ "$DEBUG" == 'true' ] && set -x
 set -e
@@ -27,7 +33,7 @@ if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
 fi 
  
 # Get reference for all important folders 
-template_dir="$PWD" 
+template_dir="$PWD/dist"
 template_dist_dir="$template_dir/global-s3-assets" 
 build_dist_dir="$template_dir/regional-s3-assets" 
 source_dir="$template_dir/../source" 
