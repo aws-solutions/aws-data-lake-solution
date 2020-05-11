@@ -57,32 +57,34 @@ Clone the aws-data-lake-solution GitHub repository:
 $> git clone https://github.com/awslabs/aws-data-lake-solution.git
 ```
 
-#### 03. Declare enviroment variables:
+#### 03. Define environment variables at :
 
-```bash
-$> export AWS_REGION=<aws-region-code>
-$> export VERSION_CODE=<version-code>
-$> export DEPLOY_BUCKET=<source-bucket-base-name>
-```
 - **aws-region-code**: AWS region code. Ex: ```us-east-1```, ```us-west-2``` ...
 - **version-code**: version of the package
-- **source-bucket-base-name**: Name for the S3 bucket location where the template will source the Lambda code from. The template will append ```-[aws-region-code]``` to this bucket name. For example: ```./build-s3-dist.sh solutions v2.0.0```, the template will then expect the source code to be located in the ```solutions-[aws-region-code]``` bucket.
+- **source-bucket-base-name**: Name for the S3 bucket location where the template will source the Lambda code from.
+
+```bash
+$> cd ./aws-data-lake-solution/deployment
+$> vi 00-set-environment.sh
+
+```
 
 #### 04. Run the data lake solution unit tests:
-```
-$> cd ./aws-data-lake-solution/deployment
 
+```bash
 $> chmod +x 01-run-unit-tests.sh
 $> ./0-1run-unit-tests.sh
 ```
 
 #### 05. Build the data lake solution for deployment:
+
 ```bash
 $> chmod +x 02-build-s3-dist.sh
 $> ./02-build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
 ```
 
 #### 06. Upload deployment assets to your Amazon S3 bucket:
+
 ```bash
 $> chmod +x 03-upload-resources.sh
 $> ./03-upload-resources.sh
