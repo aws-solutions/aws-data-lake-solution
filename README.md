@@ -92,6 +92,11 @@ aws s3 cp ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE --recursive --acl b
 
 > Currently, the data lake solution can be deployed in the following regions: [ us-east-1, us-east-2, us-west-2, eu-west-1, eu-west-2, eu-central-1, ap-northeast-1, ap-northeast-2, ap-southeast-2, ap-south-1 ]
 
+
+## Collection of operational metrics
+This solution collects anonymous operational metrics to help AWS improve the quality and features of the solution. For more information, including how to disable this capability, please see the [implementation guide](https://docs.aws.amazon.com/solutions/latest/data-lake-solution/appendix-d.html).
+
+
 ***
 
 Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
