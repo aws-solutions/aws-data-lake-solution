@@ -61,12 +61,16 @@ git clone https://github.com/awslabs/aws-data-lake-solution.git
 
 ```
 export AWS_REGION=<aws-region-code>
+export SOLUTION_NAME=<your-solution-name>
 export VERSION_CODE=<version-code>
 export DEPLOY_BUCKET=<source-bucket-base-name>
+export CLOUDFORMATION_TEMPLATE_BUCKET=<cloudformation-template-bucket-name>
 ```
-- **aws-region-code**: AWS region code. Ex: ```us-east-1```, ```us-west-2``` ...
-- **version-code**: version of the package
-- **source-bucket-base-name**: Name for the S3 bucket location where the template will source the Lambda code from. The template will append ```-[aws-region-code]``` to this bucket name. For example: ```./build-s3-dist.sh solutions v2.0.0```, the template will then expect the source code to be located in the ```solutions-[aws-region-code]``` bucket.
+- **aws-region-code**: AWS region code. e.g.: ```us-east-1```, ```us-west-2``` ...
+- **your-solution-name**: Your customized solution name. e.g. `aws-data-lake-solution`
+- **version-code**: Version of the package. e.g. `v1.0.0`
+- **source-bucket-base-name**: Name for the S3 bucket location where the template will source the Lambda code from. The template will append ```-[aws-region-code]``` to this bucket name. For example: ```./build-s3-dist.sh solutions aws-data-lake-solution v2.0.0 solutions```, the template will then expect the source code to be located in the ```solutions-[aws-region-code]``` bucket.
+- **cloudformation-template-bucket-name**: Name for the S3 bucket where the CloudFormation templates are going to be.
 
 #### 04. Run the data lake solution unit tests:
 ```
@@ -78,12 +82,13 @@ chmod +x run-unit-tests.sh
 #### 05. Build the data lake solution for deployment:
 ```
 chmod +x build-s3-dist.sh
-./build-s3-dist.sh $DEPLOY_BUCKET $VERSION_CODE
+./build-s3-dist.sh $DEPLOY_BUCKET $SOLUTION_NAME $VERSION_CODE $CLOUDFORMATION_TEMPLATE_BUCKET
 ```
 
 #### 06. Upload deployment assets to your Amazon S3 bucket:
 ```
-aws s3 cp ./dist s3://$DEPLOY_BUCKET/data-lake/$VERSION_CODE --recursive --acl bucket-owner-full-control
+aws s3 cp ./global-s3-assets s3://$CLOUDFORMATION_TEMPLATE_BUCKET/$SOLUTION_NAME/$VERSION_CODE --recursive --acl bucket-owner-full-control
+aws s3 cp ./regional-s3-assets s3://$DEPLOY_BUCKET-$AWS_REGION/$SOLUTION_NAME/$VERSION_CODE --recursive --acl bucket-owner-full-control
 ```
 
 #### 07. Deploy the data lake solution:
@@ -103,6 +108,6 @@ Copyright 2019 Amazon.com, Inc. or its affiliates. All Rights Reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except in compliance with the License. You may obtain a copy of the License at
 
-http://www.apache.org/licenses/LICENSE-2.0 
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
