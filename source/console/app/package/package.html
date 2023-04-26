@@ -237,7 +237,7 @@
                                 <th>
                                     Manifest File
                                     <div>
-                                        <small style="font-weight:normal;">Upload a manifest file with the location of existing datasets in Amazon S3 to link to the package. <a href="http://docs.awssolutionsbuilder.com/data-lake/user-guide/working-with-packages/" target="_blank">Learn more.</a></small>
+                                        <small style="font-weight:normal;">Upload a manifest file with the location of existing datasets in Amazon S3 to link to the package. <a href="http://docs.awssolutionsbuilder.com/data-lake/user-guide/working-with-packages/" target="_blank" rel="noopener noreferrer">Learn more.</a></small>                                   
                                     </div>
                                 </th>
                                 <th></th>
@@ -286,8 +286,7 @@
                         <h2>Crawler</h2>
                         <awsui-alert ng-if="pckgManifest.length != 0 && pckgContent.length > 0" dismissible="false" header="Important">
                             <b>data-lake-packages-role</b> and <b>data-lake-package-crawler-role</b> must provide access to your Amazon S3 imported datasets.
-                            <a href="http://docs.awssolutionsbuilder.com/data-lake/user-guide/working-with-packages/" target="_blank">Learn more.</a>
-                        </awsui-alert>
+                            <a href="http://docs.awssolutionsbuilder.com/data-lake/user-guide/working-with-packages/" target="_blank" rel="noopener noreferrer">Learn more.</a>                        </awsui-alert>
                         <div class="center-text" ng-show="pckgContent.length == 0">
                             <label>No content available to be crawled.</label>
                         </div>
