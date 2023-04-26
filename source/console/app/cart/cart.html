@@ -64,7 +64,7 @@
                             <td style="padding-bottom:20px; padding-top:20px;">
                                 <div><b>{{item.name}}</b><a class='awsui-util-ml-s' href='#package/{{item.package_id}}'><i class="fa fa-external-link"></i></a></div>
                                 <div class="awsui-text-small"><i>{{item.description}}</i></div>
-                                <div class="pull-left awsui-util-mr-s">[ <a target="_blank" href="{{item.url}}">download link</a> ]</div>
+                                <div class="pull-left awsui-util-mr-s">[ <a href="{{item.url}}" target="_blank" rel="noopener noreferrer">download link</a> ]</div>
                                 <div class="pull-left">[ {{item.format === 'bucket-key' ? 'Amazon S3 Bucket/Key' : 'Signed URLs'}} ]</div>
                             </td>
                             <td>{{item.expires | date: 'medium'}}</td>

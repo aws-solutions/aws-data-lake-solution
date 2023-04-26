@@ -18,7 +18,7 @@
             <section>
             <form ng-show="appconfig.setting" name="settingsForm" novalidate ng-submit="updateAppSettings(appconfig, settingsForm.$valid)">
                 <awsui-control-group class="full-width" validation-message="" label="Application Url">
-                    <a target="_blank" href='{{appconfig.setting.appUrl}}'>{{appconfig.setting.appUrl}}</a>
+                   <a target="_blank" href='{{appconfig.setting.appUrl}}' rel="noopener noreferrer">{{appconfig.setting.appUrl}}</a>
                 </awsui-control-group>
                 <awsui-control-group class="full-width" validation-message="" label="Default Amazon S3 Bucket">
                     {{appconfig.setting.defaultS3Bucket}}
@@ -27,10 +27,10 @@
                     {{appconfig.setting.esindex}}
                 </awsui-control-group>
                 <awsui-control-group class="full-width" validation-message="" label="Amazon Elasticsearch Url">
-                    <a target="_blank" href='{{appconfig.setting.esurl}}'>{{appconfig.setting.esurl}}</a>
+                    <a href='{{appconfig.setting.esurl}}' target="_blank" rel="noopener noreferrer">{{appconfig.setting.esurl}}</a>
                 </awsui-control-group>
                 <awsui-control-group class="full-width" validation-message="" label="Amazon Elasticsearch Kibana Url">
-                    <a target="_blank" href='{{appconfig.setting.esurl}}/_plugin/kibana/'>{{appconfig.setting.esurl}}/_plugin/kibana/</a>
+                   <a href='{{appconfig.setting.esurl}}/_plugin/kibana/' target="_blank" rel="noopener noreferrer">{{appconfig.setting.esurl}}/_plugin/kibana/</a>
                 </awsui-control-group>
                 <awsui-control-group class="full-width" validation-message="" label="Cognito User Pool Id">
                     {{appconfig.setting.idp}}
