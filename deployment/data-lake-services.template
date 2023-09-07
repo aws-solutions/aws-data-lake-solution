@@ -105,7 +105,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeLoggingRole"
                     - "Arn"
-            Runtime: "nodejs12.x"
+            Runtime: "nodejs18.x"
             Timeout: "60"
 
     DataLakeAdminRole:
@@ -200,7 +200,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeAdminRole"
                     - "Arn"
-            Runtime: "nodejs12.x"
+            Runtime: "nodejs18.x"
             Timeout: "60"
             Environment:
                 Variables:
@@ -305,7 +305,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeSearchRole"
                     - "Arn"
-            Runtime: "nodejs12.x"
+            Runtime: "nodejs18.x"
             Timeout: "60"
             Environment:
                 Variables:
@@ -440,7 +440,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeManifestRole"
                     - "Arn"
-            Runtime: "nodejs12.x"
+            Runtime: "nodejs18.x"
             Timeout: "300"
 
     DataLakeCartRole:
@@ -526,7 +526,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeCartRole"
                     - "Arn"
-            Runtime: "nodejs12.x"
+            Runtime: "nodejs18.x"
             Timeout: "60"
             Environment:
                 Variables:
@@ -820,7 +820,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakePackagesRole"
                     - "Arn"
-            Runtime: "nodejs12.x"
+            Runtime: "nodejs18.x"
             Timeout: "300"
             Environment:
                 Variables:
@@ -919,7 +919,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeProfileRole"
                     - "Arn"
-            Runtime: "nodejs12.x"
+            Runtime: "nodejs18.x"
             Timeout: "300"
             Environment:
                 Variables:
@@ -1003,7 +1003,7 @@ Resources:
                 Fn::GetAtt:
                     - "DataLakeAuthorizerRole"
                     - "Arn"
-            Runtime: "nodejs12.x"
+            Runtime: "nodejs18.x"
             Timeout: "60"
 
 Outputs:
